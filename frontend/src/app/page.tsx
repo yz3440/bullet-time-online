@@ -178,7 +178,7 @@ export default function Home() {
 
   return (
     <main className='w-full h-screen'>
-      <div className='fixed bottom-0 left-0 z-10 p-8 flex flex-col gap-2'>
+      <div className='fixed bottom-0 left-0 z-10 p-8 md:flex flex-col gap-2 w-36 md:w-auto hidden'>
         <div className='mx-auto hover:scale-[200%] hover:-translate-y-1/2 hover:translate-x-1/2 transition-all'>
           <React360Viewer
             imageFilenamePrefix=''
@@ -194,7 +194,7 @@ export default function Home() {
           />
         </div>
       </div>
-      <div className='fixed bottom-0 right-0 z-10 p-8 flex flex-col gap-2'>
+      <div className='fixed bottom-0 right-0 z-10 p-8 md:flex flex-col gap-2 w-36 md:w-auto flex'>
         <div className='mx-auto hover:scale-[200%] hover:-translate-y-1/2 hover:-translate-x-1/2 transition-all'>
           <React360Viewer
             imageFilenamePrefix=''
