@@ -45,14 +45,17 @@ const Axes = () => {
 };
 
 function makeSplatUrl(splatSrc: string) {
-  return `${SPLAT_DIR}/${splatSrc}.splat`;
+  return `/splats/${splatSrc}.splat`;
+  // return `${SPLAT_DIR}/${splatSrc}.splat`;
 }
 
 export default function Home() {
+  const splatSrc = SplatSource.BULLET_TIME_1;
+
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
 
   const splatCamerasParsed: SplatCameraParsed[] = useMemo(() => {
-    return RAW_CAMERAS['5c4ca143-0'].map(parseRawCamera);
+    return RAW_CAMERAS[splatSrc].map(parseRawCamera);
   }, []);
 
   const { cameraAngle } = useControls({
@@ -66,8 +69,6 @@ export default function Home() {
   });
 
   const showSplats = true;
-  const splatSrc = SplatSource.BULLET_TIME_1;
-  const cameraUrl = `/cameras/${splatSrc}.json`;
 
   const projectionMatrix = useMemo(() => {
     const width = 3754;
