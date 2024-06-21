@@ -64,7 +64,7 @@ const PyramidOutline = (size = new THREE.Vector3(1, 1, 1)) => {
 
   // Create a MeshBasicMaterial
   const baseMaterial = new THREE.MeshBasicMaterial({
-    color: 0x1168ff,
+    color: 0x00ff41,
     side: THREE.DoubleSide,
   });
   baseMaterial.transparent = true;

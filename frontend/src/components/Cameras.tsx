@@ -3,66 +3,48 @@ import * as THREE from 'three';
 import PyramidOutline from './PyramidOutline';
 
 interface CamerasProps {
-  splatCameras: SplatCamera[];
+  splatCameras: SplatCameraParsed[];
+  cameraRef: React.MutableRefObject<THREE.PerspectiveCamera | null>;
 }
 
 export interface SplatCamera {
   position: [number, number, number];
   rotation: number[][];
 }
-const Cameras: React.FC<CamerasProps> = ({ splatCameras }) => {
+
+export interface SplatCameraParsed {
+  position: THREE.Vector3;
+  rotation: THREE.Euler;
+  quaternion: THREE.Quaternion;
+}
+
+const Cameras: React.FC<CamerasProps> = ({
+  splatCameras: splatCamerasParsed,
+  cameraRef,
+}) => {
   const groupRef = useRef<THREE.Group>(new THREE.Group());
 
   useEffect(() => {
     const fetchCameras = () => {
-      // clear existing cameras
-      // groupRef.current.children = [];
-      // const response = await fetch(url);
-      // const data = await response.json();
-      // console.log(data);
-      splatCameras.forEach((item: any) => {
-        const materialB = new THREE.MeshBasicMaterial({
-          color: 0xffffff,
-          side: THREE.DoubleSide,
-          wireframe: true,
-        });
-        const camera = PyramidOutline(new THREE.Vector3(0.06, 0.06, 0.045));
-
-        // camera.quaternion.set(
-        //   ...(item.quaternion as [number, number, number, number])
-        // );
-        const rotation = item.rotation; // rotation is a 3x3 matrix, 2d array
-
-        const paddedRotation = new THREE.Matrix4();
-        paddedRotation.set(
-          rotation[0][0],
-          rotation[0][1],
-          rotation[0][2],
-          0,
-          rotation[1][0],
-          rotation[1][1],
-          rotation[1][2],
-          0,
-          rotation[2][0],
-          rotation[2][1],
-          rotation[2][2],
-          0,
-          0,
-          0,
-          0,
-          1
+      splatCamerasParsed.forEach((splatCamera, i) => {
+        const cameraPyramid = PyramidOutline(
+          new THREE.Vector3(0.06, 0.06, 0.045)
         );
-        camera.position.set(...(item.position as [number, number, number]));
 
-        camera.setRotationFromMatrix(paddedRotation);
-        // camera.rotate(THREE.MathUtils.degToRad(180));
+        cameraPyramid.position.set(
+          splatCamera.position.x,
+          splatCamera.position.y,
+          splatCamera.position.z
+        );
+        cameraPyramid.rotation.setFromQuaternion(splatCamera.quaternion);
+        cameraPyramid.rotateX(THREE.MathUtils.degToRad(90));
 
-        groupRef.current.add(camera);
+        groupRef.current.add(cameraPyramid);
       });
     };
 
     fetchCameras();
-  }, [splatCameras]);
+  }, [splatCamerasParsed]);
 
   return <primitive object={groupRef.current} />;
 };
