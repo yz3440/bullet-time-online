@@ -1,4 +1,4 @@
-interface RawCamera {
+export interface RawCamera {
   id: number;
   img_name: string;
   width: number;
@@ -9,7 +9,7 @@ interface RawCamera {
   fx: number;
 }
 
-type RawCameras = {
+export type RawCameras = {
   [key: string]: RawCamera[];
 };
 
