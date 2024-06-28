@@ -145,35 +145,59 @@ export default function Home() {
       </Canvas>
 
       <div className='fixed bottom-0 left-0 z-10 p-8 md:flex flex-col gap-2 w-36 md:w-auto hidden'>
-        <div className='mx-auto hover:scale-[200%] hover:-translate-y-1/2 hover:translate-x-1/2 transition-all'>
-          <React360Viewer
-            imageFilenamePrefix=''
-            imagesBaseUrl='./bluray-box/'
-            imagesCount={54}
-            imagesFiletype='webp'
-            mouseDragSpeed={20}
-            reverse
-            notifyOnPointerDown={function noRefCheck() {}}
-            notifyOnPointerMoved={function noRefCheck() {}}
-            notifyOnPointerUp={function noRefCheck() {}}
-            autoplay
-          />
+        <div className='mx-auto hover:scale-[200%] hover:-translate-y-1/2 hover:translate-x-1/2 transition-all group'>
+          <div className='text-center hidden group-hover:block font-led text-[#00FF41] animate-led-text-glow-green'>
+            <span className='px-2 py-1 bg-black mx-auto'>
+              <a
+                href='https://www.blu-ray.com/movies/The-Matrix-Blu-ray/75475/'
+                target='_blank'
+              >
+                BUY NOW
+              </a>
+            </span>
+          </div>
+          <div className='cursor-move'>
+            <React360Viewer
+              imageFilenamePrefix=''
+              imagesBaseUrl='./bluray-box/'
+              imagesCount={54}
+              imagesFiletype='webp'
+              mouseDragSpeed={20}
+              reverse
+              notifyOnPointerDown={function noRefCheck() {}}
+              notifyOnPointerMoved={function noRefCheck() {}}
+              notifyOnPointerUp={function noRefCheck() {}}
+              autoplay
+            />
+          </div>
         </div>
       </div>
       <div className='fixed bottom-0 right-0 z-10 p-8 md:flex flex-col gap-2 w-36 md:w-auto flex'>
-        <div className='mx-auto hover:scale-[200%] hover:-translate-y-1/2 hover:-translate-x-1/2 transition-all'>
-          <React360Viewer
-            imageFilenamePrefix=''
-            imagesBaseUrl='./bluray-box/'
-            imagesCount={54}
-            imagesFiletype='webp'
-            mouseDragSpeed={20}
-            reverse
-            notifyOnPointerDown={function noRefCheck() {}}
-            notifyOnPointerMoved={function noRefCheck() {}}
-            notifyOnPointerUp={function noRefCheck() {}}
-            autoplay
-          />
+        <div className='mx-auto hover:scale-[200%] hover:-translate-y-1/2 hover:-translate-x-1/2 transition-all group'>
+          <div className='text-center hidden group-hover:block font-led text-[#00FF41] animate-led-text-glow-green'>
+            <span className='px-2 py-1 bg-black mx-auto'>
+              <a
+                href='https://www.blu-ray.com/movies/The-Matrix-Blu-ray/75475/'
+                target='_blank'
+              >
+                BUY NOW
+              </a>
+            </span>
+          </div>
+          <div className='cursor-move'>
+            <React360Viewer
+              imageFilenamePrefix=''
+              imagesBaseUrl='./bluray-box/'
+              imagesCount={54}
+              imagesFiletype='webp'
+              mouseDragSpeed={20}
+              reverse
+              notifyOnPointerDown={function noRefCheck() {}}
+              notifyOnPointerMoved={function noRefCheck() {}}
+              notifyOnPointerUp={function noRefCheck() {}}
+              autoplay
+            />
+          </div>
         </div>
       </div>
 
