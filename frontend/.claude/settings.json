@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/yfz/Developer/GitHub/bullet-time/**)",
+      "Bash(find /Users/yfz/Developer/GitHub/bullet-time -maxdepth 2 -name README.md -o -name *.md)",
+      "Bash(git show:*)",
+      "Bash(git log:*)",
+      "Bash(find /Users/yfz/Developer/GitHub/bullet-time -maxdepth 3 -name *.ipynb -o -name *.py)",
+      "Bash(npx vite:*)",
+      "Bash(node -e \":*)",
+      "Bash(bun run -e \":*)",
+      "Bash(bun eval \":*)",
+      "Bash(bun -e \":*)",
+      "WebSearch",
+      "Bash(xxd /Users/yfz/Developer/GitHub/bullet-time/bullet-time-online/public/postshot-cameras.abc)",
+      "Bash(python3 -c \"import alembic; print\\(''''alembic available''''\\)\")",
+      "Bash(pip3 install:*)",
+      "Bash(uvx --from alembic python3 -c \"import alembic; print\\(''''ok''''\\)\")",
+      "Bash(pip3 list:*)"
+    ]
+  }
+}
