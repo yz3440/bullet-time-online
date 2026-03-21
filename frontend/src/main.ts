@@ -304,7 +304,7 @@ app.on('update', (dt: number) => {
 
 // ---- Overlay UI ----
 
-initOverlay({
+const overlayHandle = initOverlay({
   cameraCount: cameras.length,
   initialCameraIndex: params.cameraIndex,
   initialShowCones: params.showCones,
@@ -333,3 +333,16 @@ initOverlay({
     }
   },
 });
+
+// Scroll to advance camera in follow mode
+window.addEventListener('wheel', (e) => {
+  if (!params.followCamera) return;
+  e.preventDefault();
+  const dir = e.deltaY > 0 ? 1 : -1;
+  const next = Math.max(0, Math.min(cameras.length - 1, params.cameraIndex + dir));
+  if (next !== params.cameraIndex) {
+    params.cameraIndex = next;
+    transition.active = false;
+    overlayHandle.setCameraIndex(next);
+  }
+}, { passive: false });
