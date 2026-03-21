@@ -33,7 +33,7 @@ function createIconToggle(
   const btn = document.createElement('button');
   btn.className =
     'w-9 h-9 flex items-center justify-center rounded transition-colors ' +
-    'hover:bg-white/10 focus:outline-none';
+    'hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-[#00FF41]/60 focus:outline-none';
 
   function render() {
     btn.innerHTML = '';

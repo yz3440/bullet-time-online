@@ -115,7 +115,7 @@ function buildFrustumLines(cams: ParsedCamera[]): Float32Array {
   return arr;
 }
 
-const frustumPositions = buildFrustumLines(cameras);
+const frustumPositions = Array.from(buildFrustumLines(cameras));
 const frustumColor = new pc.Color(0, 1, 0.255, 0.6);
 
 // ---- PlayCanvas Application ----
@@ -205,11 +205,7 @@ function applyCameraFollow() {
 
 app.on('update', () => {
   if (params.showCones) {
-    app.drawLineArrays(
-      Array.from(frustumPositions),
-      frustumColor,
-      false,
-    );
+    app.drawLineArrays(frustumPositions, frustumColor, false);
   }
 
   if (params.followCamera) {
