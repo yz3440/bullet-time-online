@@ -39,10 +39,22 @@ const cam0Z = new pc.Vec3().cross(cam0Right, cam0Up).normalize();
 // Column-major: columns are right, up, z
 const levelMatrix = new pc.Mat4();
 levelMatrix.set([
-  cam0Right.x, cam0Right.y, cam0Right.z, 0,
-  cam0Up.x, cam0Up.y, cam0Up.z, 0,
-  cam0Z.x, cam0Z.y, cam0Z.z, 0,
-  0, 0, 0, 1,
+  cam0Right.x,
+  cam0Right.y,
+  cam0Right.z,
+  0,
+  cam0Up.x,
+  cam0Up.y,
+  cam0Up.z,
+  0,
+  cam0Z.x,
+  cam0Z.y,
+  cam0Z.z,
+  0,
+  0,
+  0,
+  0,
+  1,
 ]);
 const levelRotation = new pc.Quat().setFromMat4(levelMatrix).invert();
 
@@ -71,7 +83,9 @@ function parseColmapCamera(raw: ColmapImage): ParsedCamera {
   return { position, quaternion: q_c2w, fov };
 }
 
-const cameras: ParsedCamera[] = (colmapData as ColmapImage[]).map(parseColmapCamera);
+const cameras: ParsedCamera[] = (colmapData as ColmapImage[]).map(
+  parseColmapCamera,
+);
 
 const centroid = new pc.Vec3();
 for (const cam of cameras) centroid.add(cam.position);
@@ -89,14 +103,22 @@ function buildFrustumLines(cams: ParsedCamera[]): Float32Array {
   const arr = new Float32Array(cams.length * floatsPerCam);
 
   const localVerts = [
-    new pc.Vec3(0, 0, 0), new pc.Vec3(-hw, hh, -d),
-    new pc.Vec3(0, 0, 0), new pc.Vec3(hw, hh, -d),
-    new pc.Vec3(0, 0, 0), new pc.Vec3(hw, -hh, -d),
-    new pc.Vec3(0, 0, 0), new pc.Vec3(-hw, -hh, -d),
-    new pc.Vec3(-hw, hh, -d), new pc.Vec3(hw, hh, -d),
-    new pc.Vec3(hw, hh, -d), new pc.Vec3(hw, -hh, -d),
-    new pc.Vec3(hw, -hh, -d), new pc.Vec3(-hw, -hh, -d),
-    new pc.Vec3(-hw, -hh, -d), new pc.Vec3(-hw, hh, -d),
+    new pc.Vec3(0, 0, 0),
+    new pc.Vec3(-hw, hh, -d),
+    new pc.Vec3(0, 0, 0),
+    new pc.Vec3(hw, hh, -d),
+    new pc.Vec3(0, 0, 0),
+    new pc.Vec3(hw, -hh, -d),
+    new pc.Vec3(0, 0, 0),
+    new pc.Vec3(-hw, -hh, -d),
+    new pc.Vec3(-hw, hh, -d),
+    new pc.Vec3(hw, hh, -d),
+    new pc.Vec3(hw, hh, -d),
+    new pc.Vec3(hw, -hh, -d),
+    new pc.Vec3(hw, -hh, -d),
+    new pc.Vec3(-hw, -hh, -d),
+    new pc.Vec3(-hw, -hh, -d),
+    new pc.Vec3(-hw, hh, -d),
   ];
 
   const tmp = new pc.Vec3();
@@ -132,11 +154,14 @@ app.start();
 window.addEventListener('resize', () => app.resizeCanvas());
 
 // Import camera-controls script class (must happen after Application is created)
-const { CameraControls } = await import('playcanvas/scripts/esm/camera-controls.mjs');
+const { CameraControls } =
+  await import('playcanvas/scripts/esm/camera-controls.mjs');
 
 // ---- Load assets ----
 
-const splatAsset = new pc.Asset('splat', 'gsplat', { url: '/splats/bullet-time.sog' });
+const splatAsset = new pc.Asset('splat', 'gsplat', {
+  url: '/splats/bullet-time.sog',
+});
 const loader = new pc.AssetListLoader([splatAsset], app.assets);
 await new Promise<void>((resolve) => loader.load(resolve));
 
@@ -151,12 +176,12 @@ cameraEntity.addComponent('camera', {
 });
 cameraEntity.addComponent('script');
 cameraEntity.script!.create(CameraControls as any);
-cameraEntity.setPosition(centroid.x + 5, centroid.y + 5, centroid.z + 5);
+cameraEntity.setPosition(-4.648, -1.686, 4.690);
 app.root.addChild(cameraEntity);
 
 const cameraControls = (cameraEntity.script as any)?.cameraControls;
 if (cameraControls) {
-  cameraControls.focusPoint = centroid.clone();
+  cameraControls.focusPoint = new pc.Vec3(-4.613, -0.171, -3.836);
 }
 
 // ---- Splat ----
@@ -190,7 +215,12 @@ function applyCameraFollow() {
       cameraControls.enablePan = false;
     }
     cameraEntity.setPosition(cam.position.x, cam.position.y, cam.position.z);
-    cameraEntity.setLocalRotation(cam.quaternion.x, cam.quaternion.y, cam.quaternion.z, cam.quaternion.w);
+    cameraEntity.setLocalRotation(
+      cam.quaternion.x,
+      cam.quaternion.y,
+      cam.quaternion.z,
+      cam.quaternion.w,
+    );
     (cameraEntity.camera as any).fov = cam.fov;
   } else {
     if (cameraControls) {
