@@ -310,15 +310,19 @@ const overlayHandle = initOverlay({
     if (!params.followCamera) {
       params.followCamera = true;
       overlayHandle.setFollowCamera(true);
+      overlayHandle.frameViewer.setVisible(true);
       startTransition();
     } else {
       transition.active = false;
     }
+    overlayHandle.frameViewer.setFrameIndex(index);
   },
   onFollowCameraChange(follow) {
     params.followCamera = follow;
+    overlayHandle.frameViewer.setVisible(follow);
     if (follow) {
       startTransition();
+      overlayHandle.frameViewer.setFrameIndex(params.cameraIndex);
     } else {
       releaseCamera();
     }
@@ -327,6 +331,7 @@ const overlayHandle = initOverlay({
     params.followCamera = false;
     transition.active = false;
     releaseCamera();
+    overlayHandle.frameViewer.setVisible(false);
     if (cameraControls) {
       cameraControls.reset(defaultFocusPoint, defaultCameraPos);
     }
@@ -339,6 +344,7 @@ canvas.addEventListener('pointerdown', () => {
     params.followCamera = false;
     releaseCamera();
     overlayHandle.setFollowCamera(false);
+    overlayHandle.frameViewer.setVisible(false);
   }
 });
 
@@ -352,5 +358,6 @@ window.addEventListener('wheel', (e) => {
     params.cameraIndex = next;
     transition.active = false;
     overlayHandle.setCameraIndex(next);
+    overlayHandle.frameViewer.setFrameIndex(next);
   }
 }, { passive: false });

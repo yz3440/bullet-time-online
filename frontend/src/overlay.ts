@@ -492,9 +492,148 @@ function createProductCorner(position: 'left' | 'right'): HTMLElement {
   return outer;
 }
 
+// ---- Floating Window ----
+
+export interface FloatingWindowHandle {
+  element: HTMLElement;
+  setVisible: (visible: boolean) => void;
+  contentEl: HTMLElement;
+}
+
+function createFloatingWindow(title: string, opts?: { width?: number; x?: number; y?: number }): FloatingWindowHandle {
+  const win = document.createElement('div');
+  win.style.position = 'fixed';
+  win.style.zIndex = '9998';
+  win.style.left = `${opts?.x ?? 80}px`;
+  win.style.bottom = `${opts?.y ?? 40}px`;
+  win.style.width = `${opts?.width ?? 400}px`;
+  win.style.background = 'rgba(0,0,0,0.85)';
+  win.style.border = '1px solid #00FF41';
+  win.style.boxShadow = '0 0 12px rgba(0,255,65,0.15)';
+  win.style.display = 'none';
+  win.style.pointerEvents = 'auto';
+
+  const titleBar = document.createElement('div');
+  titleBar.style.display = 'flex';
+  titleBar.style.alignItems = 'center';
+  titleBar.style.justifyContent = 'space-between';
+  titleBar.style.padding = '4px 8px';
+  titleBar.style.cursor = 'grab';
+  titleBar.style.borderBottom = '1px solid #00FF4140';
+  titleBar.style.userSelect = 'none';
+
+  const titleText = document.createElement('span');
+  titleText.className = 'font-led';
+  titleText.style.color = '#00FF41';
+  titleText.style.fontSize = '11px';
+  titleText.textContent = title;
+
+  const minimizeBtn = document.createElement('button');
+  minimizeBtn.style.background = 'none';
+  minimizeBtn.style.border = '1px solid #00FF4160';
+  minimizeBtn.style.color = '#00FF41';
+  minimizeBtn.style.cursor = 'pointer';
+  minimizeBtn.style.fontFamily = 'monospace';
+  minimizeBtn.style.fontSize = '12px';
+  minimizeBtn.style.lineHeight = '1';
+  minimizeBtn.style.padding = '1px 5px';
+  minimizeBtn.textContent = '_';
+
+  titleBar.appendChild(titleText);
+  titleBar.appendChild(minimizeBtn);
+
+  const content = document.createElement('div');
+  content.style.overflow = 'hidden';
+
+  win.appendChild(titleBar);
+  win.appendChild(content);
+
+  let minimized = false;
+  minimizeBtn.addEventListener('click', () => {
+    minimized = !minimized;
+    content.style.display = minimized ? 'none' : '';
+    minimizeBtn.textContent = minimized ? '□' : '_';
+  });
+
+  // Drag logic
+  let dragging = false;
+  let dragOffsetX = 0;
+  let dragOffsetY = 0;
+
+  titleBar.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    titleBar.style.cursor = 'grabbing';
+    titleBar.setPointerCapture(e.pointerId);
+    const rect = win.getBoundingClientRect();
+    dragOffsetX = e.clientX - rect.left;
+    dragOffsetY = e.clientY - rect.top;
+    // Switch from bottom-anchored to top-anchored on first drag
+    if (win.style.bottom) {
+      const r = win.getBoundingClientRect();
+      win.style.top = `${r.top}px`;
+      win.style.bottom = '';
+    }
+  });
+
+  titleBar.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const x = e.clientX - dragOffsetX;
+    const y = e.clientY - dragOffsetY;
+    win.style.left = `${x}px`;
+    win.style.top = `${y}px`;
+  });
+
+  titleBar.addEventListener('pointerup', () => {
+    dragging = false;
+    titleBar.style.cursor = 'grab';
+  });
+
+  return {
+    element: win,
+    contentEl: content,
+    setVisible(visible: boolean) {
+      win.style.display = visible ? '' : 'none';
+    },
+  };
+}
+
+// ---- Original Frame Viewer ----
+
+export interface FrameViewerHandle {
+  element: HTMLElement;
+  setVisible: (visible: boolean) => void;
+  setFrameIndex: (index: number) => void;
+}
+
+const FRAME_FPS = 24;
+
+function createFrameViewer(): FrameViewerHandle {
+  const win = createFloatingWindow('ORIGINAL FRAME', { width: 480, x: 80, y: 40 });
+
+  const video = document.createElement('video');
+  video.src = '/original-frames.mp4';
+  video.preload = 'auto';
+  video.muted = true;
+  video.playsInline = true;
+  video.style.width = '100%';
+  video.style.display = 'block';
+
+  win.contentEl.appendChild(video);
+
+  return {
+    element: win.element,
+    setVisible(visible: boolean) {
+      win.setVisible(visible);
+    },
+    setFrameIndex(index: number) {
+      video.currentTime = index / FRAME_FPS;
+    },
+  };
+}
+
 // ---- Init ----
 
-export function initOverlay(config: TopBarConfig): TopBarHandle {
+export function initOverlay(config: TopBarConfig): TopBarHandle & { frameViewer: FrameViewerHandle } {
   const root = document.getElementById('root')!;
 
   const { element, handle } = createTopBar(config);
@@ -503,5 +642,8 @@ export function initOverlay(config: TopBarConfig): TopBarHandle {
   root.appendChild(createProductCorner('right'));
   root.appendChild(createMarquee());
 
-  return handle;
+  const frameViewer = createFrameViewer();
+  root.appendChild(frameViewer.element);
+
+  return { ...handle, frameViewer };
 }
