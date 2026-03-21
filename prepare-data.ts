@@ -1,4 +1,35 @@
-import { readFileSync } from 'fs';
+/**
+ * One-time data preparation script.
+ *
+ * Parses COLMAP binary files → JSON camera data, and converts the raw PLY
+ * Gaussian splat to PlayCanvas SOG format. Only regenerates when sources
+ * are newer than outputs (timestamp check).
+ *
+ * Usage: bun prepare-data.ts
+ *
+ * Requires: bun install in frontend/ (for @playcanvas/splat-transform)
+ */
+
+import { readFileSync, writeFileSync, mkdirSync, statSync, existsSync } from 'fs';
+import { execSync } from 'child_process';
+import path from 'path';
+
+const rootDir = import.meta.dirname;
+
+// ---- Paths ----
+
+const colmapDir = path.join(rootDir, 'reconstruction-data/colmap');
+const plyPath = path.join(rootDir, 'reconstruction-data/splats/bullet-time.ply');
+const jsonOut = path.join(rootDir, 'frontend/src/data/postshot-colmap.json');
+const sogOut = path.join(rootDir, 'frontend/public/splats/bullet-time.sog');
+
+// ---- Helpers ----
+
+function mtime(filepath: string): number {
+  try { return statSync(filepath).mtimeMs; } catch { return 0; }
+}
+
+// ---- COLMAP binary parser ----
 
 const CAMERA_MODELS: Record<number, { name: string; numParams: number }> = {
   0: { name: 'SIMPLE_PINHOLE', numParams: 3 },
@@ -72,8 +103,40 @@ function parseImagesBin(buf: Buffer, cameras: ReturnType<typeof parseCamerasBin>
   return images;
 }
 
-export function parseColmap(colmapDir: string) {
-  const cameras = parseCamerasBin(readFileSync(`${colmapDir}/cameras.bin`));
-  const images = parseImagesBin(readFileSync(`${colmapDir}/images.bin`), cameras);
-  return { cameras, images };
+// ---- Main ----
+
+const camerasPath = path.join(colmapDir, 'cameras.bin');
+const imagesPath = path.join(colmapDir, 'images.bin');
+
+if (!existsSync(camerasPath)) {
+  console.error('reconstruction-data/colmap/ not found');
+  process.exit(1);
+}
+
+const sourceTime = Math.max(mtime(camerasPath), mtime(imagesPath));
+if (sourceTime > mtime(jsonOut)) {
+  const cameras = parseCamerasBin(readFileSync(camerasPath));
+  const images = parseImagesBin(readFileSync(imagesPath), cameras);
+  mkdirSync(path.dirname(jsonOut), { recursive: true });
+  writeFileSync(jsonOut, JSON.stringify(images, null, 2));
+  console.log(`${Object.keys(cameras).length} cameras, ${images.length} images → ${path.relative(rootDir, jsonOut)}`);
+} else {
+  console.log('postshot-colmap.json is up to date');
+}
+
+if (!existsSync(plyPath)) {
+  console.error('reconstruction-data/splats/bullet-time.ply not found');
+  process.exit(1);
+}
+
+if (mtime(plyPath) > mtime(sogOut)) {
+  mkdirSync(path.dirname(sogOut), { recursive: true });
+  console.log('Converting PLY → SOG ...');
+  execSync(
+    `npx splat-transform -w -g 0 -i 3 "${plyPath}" --filter-sphere 0,0,-7,50 "${sogOut}"`,
+    { stdio: 'inherit', cwd: path.join(rootDir, 'frontend') },
+  );
+  console.log(`→ ${path.relative(rootDir, sogOut)}`);
+} else {
+  console.log('bullet-time.sog is up to date');
 }
