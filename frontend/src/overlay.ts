@@ -2,59 +2,21 @@
  * Overlay UI: top bar controls + marquee ticker + 360 product viewer (no React).
  */
 
-import { createElement, Eye, EyeOff, Video, VideoOff, RotateCcw } from 'lucide';
+import { createElement, RotateCcw } from 'lucide';
 
 // ---- Top Bar Config ----
 
 export interface TopBarConfig {
   cameraCount: number;
   initialCameraIndex: number;
-  initialShowCones: boolean;
   initialFollowCamera: boolean;
   onCameraIndexChange: (index: number) => void;
-  onShowConesChange: (show: boolean) => void;
   onFollowCameraChange: (follow: boolean) => void;
   onResetCamera: () => void;
 }
 
 export interface TopBarHandle {
   setCameraIndex: (index: number) => void;
-}
-
-// ---- Top Bar ----
-
-function createIconToggle(
-  iconOn: Parameters<typeof createElement>[0],
-  iconOff: Parameters<typeof createElement>[0],
-  initial: boolean,
-  onChange: (active: boolean) => void,
-): HTMLButtonElement {
-  let active = initial;
-
-  const btn = document.createElement('button');
-  btn.className =
-    'w-9 h-9 flex items-center justify-center rounded transition-colors ' +
-    'hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-[#00FF41]/60 focus:outline-none';
-
-  function render() {
-    btn.innerHTML = '';
-    const icon = createElement(active ? iconOn : iconOff, {
-      size: 18,
-      color: active ? '#00FF41' : '#666',
-      'stroke-width': 1.5,
-    });
-    btn.appendChild(icon);
-    btn.title = active ? 'On' : 'Off';
-  }
-
-  btn.addEventListener('click', () => {
-    active = !active;
-    render();
-    onChange(active);
-  });
-
-  render();
-  return btn;
 }
 
 // ---- Custom Slider ----
@@ -287,9 +249,6 @@ function createTopBar(config: TopBarConfig): { element: HTMLElement; handle: Top
   bar.style.zIndex = '9999';
   bar.style.pointerEvents = 'auto';
 
-  const conesToggle = createIconToggle(Eye, EyeOff, config.initialShowCones, config.onShowConesChange);
-  conesToggle.title = 'Show Frustums';
-
   const followToggle = createBistableSwitch(config.initialFollowCamera, config.onFollowCameraChange);
   followToggle.title = 'Follow Camera';
 
@@ -313,7 +272,6 @@ function createTopBar(config: TopBarConfig): { element: HTMLElement; handle: Top
   resetBtn.appendChild(createElement(RotateCcw, { size: 18, color: '#00FF41', 'stroke-width': 1.5 }));
   resetBtn.addEventListener('click', config.onResetCamera);
 
-  bar.appendChild(conesToggle);
   bar.appendChild(resetBtn);
   bar.appendChild(slider.element);
   bar.appendChild(label);

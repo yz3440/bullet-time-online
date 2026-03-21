@@ -214,7 +214,6 @@ app.root.addChild(splatEntity);
 // ---- State ----
 
 const params = {
-  showCones: true,
   cameraIndex: 0,
   followCamera: false,
 };
@@ -258,23 +257,21 @@ function releaseCamera() {
 const _lerpPos = new pc.Vec3();
 const _lerpQuat = new pc.Quat();
 
-// TEMP: log camera position every 2s
-let _lastLog = 0;
+// // TEMP: log camera position every 2s
+// let _lastLog = 0;
 app.on('update', (dt: number) => {
-  const now = performance.now();
-  if (now - _lastLog > 2000) {
-    _lastLog = now;
-    const p = cameraEntity.getPosition();
-    const fp = cameraControls?.focusPoint;
-    console.log(
-      `[camera] pos: (${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)})` +
-      (fp ? ` | focus: (${fp.x.toFixed(3)}, ${fp.y.toFixed(3)}, ${fp.z.toFixed(3)})` : '')
-    );
-  }
+  // const now = performance.now();
+  // if (now - _lastLog > 2000) {
+  //   _lastLog = now;
+  //   const p = cameraEntity.getPosition();
+  //   const fp = cameraControls?.focusPoint;
+  //   console.log(
+  //     `[camera] pos: (${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)})` +
+  //     (fp ? ` | focus: (${fp.x.toFixed(3)}, ${fp.y.toFixed(3)}, ${fp.z.toFixed(3)})` : '')
+  //   );
+  // }
 
-  if (params.showCones) {
-    app.drawLineArrays(frustumPositions, frustumColor, false);
-  }
+  app.drawLineArrays(frustumPositions, frustumColor, false);
 
   if (transition.active) {
     transition.progress = Math.min(transition.progress + dt * LERP_SPEED, 1);
@@ -307,14 +304,10 @@ app.on('update', (dt: number) => {
 const overlayHandle = initOverlay({
   cameraCount: cameras.length,
   initialCameraIndex: params.cameraIndex,
-  initialShowCones: params.showCones,
   initialFollowCamera: params.followCamera,
   onCameraIndexChange(index) {
     params.cameraIndex = index;
     transition.active = false;
-  },
-  onShowConesChange(show) {
-    params.showCones = show;
   },
   onFollowCameraChange(follow) {
     params.followCamera = follow;
