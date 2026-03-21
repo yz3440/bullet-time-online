@@ -1,6 +1,109 @@
 /**
- * Overlay UI: marquee ticker + 360 product viewer (no React).
+ * Overlay UI: top bar controls + marquee ticker + 360 product viewer (no React).
  */
+
+import { createElement, Eye, EyeOff, Video, VideoOff } from 'lucide';
+
+// ---- Top Bar Config ----
+
+export interface TopBarConfig {
+  cameraCount: number;
+  initialCameraIndex: number;
+  initialShowCones: boolean;
+  initialFollowCamera: boolean;
+  onCameraIndexChange: (index: number) => void;
+  onShowConesChange: (show: boolean) => void;
+  onFollowCameraChange: (follow: boolean) => void;
+}
+
+export interface TopBarHandle {
+  setCameraIndex: (index: number) => void;
+}
+
+// ---- Top Bar ----
+
+function createIconToggle(
+  iconOn: Parameters<typeof createElement>[0],
+  iconOff: Parameters<typeof createElement>[0],
+  initial: boolean,
+  onChange: (active: boolean) => void,
+): HTMLButtonElement {
+  let active = initial;
+
+  const btn = document.createElement('button');
+  btn.className =
+    'w-9 h-9 flex items-center justify-center rounded transition-colors ' +
+    'hover:bg-white/10 focus:outline-none';
+
+  function render() {
+    btn.innerHTML = '';
+    const icon = createElement(active ? iconOn : iconOff, {
+      size: 18,
+      color: active ? '#00FF41' : '#666',
+      'stroke-width': 1.5,
+    });
+    btn.appendChild(icon);
+    btn.title = active ? 'On' : 'Off';
+  }
+
+  btn.addEventListener('click', () => {
+    active = !active;
+    render();
+    onChange(active);
+  });
+
+  render();
+  return btn;
+}
+
+function createTopBar(config: TopBarConfig): { element: HTMLElement; handle: TopBarHandle } {
+  const bar = document.createElement('div');
+  bar.className =
+    'fixed top-0 left-0 right-0 flex items-center gap-3 px-4 py-2 ' +
+    'bg-black/70 backdrop-blur-sm';
+  bar.style.zIndex = '9999';
+  bar.style.pointerEvents = 'auto';
+
+  const conesToggle = createIconToggle(Eye, EyeOff, config.initialShowCones, config.onShowConesChange);
+  conesToggle.title = 'Show Frustums';
+
+  const followToggle = createIconToggle(Video, VideoOff, config.initialFollowCamera, config.onFollowCameraChange);
+  followToggle.title = 'Follow Camera';
+
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.min = '0';
+  slider.max = String(config.cameraCount - 1);
+  slider.value = String(config.initialCameraIndex);
+  slider.className = 'frame-slider flex-1 h-1.5 cursor-pointer';
+
+  const label = document.createElement('span');
+  label.className = 'font-led text-[#00FF41] text-sm tabular-nums whitespace-nowrap min-w-[5ch] text-right';
+  function updateLabel(index: number) {
+    label.textContent = `${index + 1}/${config.cameraCount}`;
+  }
+  updateLabel(config.initialCameraIndex);
+
+  slider.addEventListener('input', () => {
+    const idx = parseInt(slider.value, 10);
+    updateLabel(idx);
+    config.onCameraIndexChange(idx);
+  });
+
+  bar.appendChild(conesToggle);
+  bar.appendChild(followToggle);
+  bar.appendChild(slider);
+  bar.appendChild(label);
+
+  const handle: TopBarHandle = {
+    setCameraIndex(index: number) {
+      slider.value = String(index);
+      updateLabel(index);
+    },
+  };
+
+  return { element: bar, handle };
+}
 
 // ---- Marquee ----
 
@@ -149,10 +252,14 @@ function createProductCorner(position: 'left' | 'right'): HTMLElement {
 
 // ---- Init ----
 
-export function initOverlay() {
+export function initOverlay(config: TopBarConfig): TopBarHandle {
   const root = document.getElementById('root')!;
 
+  const { element, handle } = createTopBar(config);
+  root.appendChild(element);
   root.appendChild(createProductCorner('left'));
   root.appendChild(createProductCorner('right'));
   root.appendChild(createMarquee());
+
+  return handle;
 }
