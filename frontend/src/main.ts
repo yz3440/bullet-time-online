@@ -176,12 +176,25 @@ cameraEntity.addComponent('camera', {
 });
 cameraEntity.addComponent('script');
 cameraEntity.script!.create(CameraControls as any);
-cameraEntity.setPosition(-4.648, -1.686, 4.690);
+const defaultCameraPos = new pc.Vec3(-4.362, 1.166, 7.613);
+const defaultFocusPoint = new pc.Vec3(-4.349, -0.780, -3.866);
+
+cameraEntity.setPosition(defaultCameraPos);
 app.root.addChild(cameraEntity);
 
 const cameraControls = (cameraEntity.script as any)?.cameraControls;
 if (cameraControls) {
-  cameraControls.focusPoint = new pc.Vec3(-4.613, -0.171, -3.836);
+  cameraControls.focusPoint = defaultFocusPoint.clone();
+
+  // Remap: right-click → pan (orbit), middle-click → look (fly)
+  const origRead = cameraControls._desktopInput.read.bind(cameraControls._desktopInput);
+  cameraControls._desktopInput.read = () => {
+    const data = origRead();
+    const tmp = data.button[1];
+    data.button[1] = data.button[2];
+    data.button[2] = tmp;
+    return data;
+  };
 }
 
 // ---- Splat ----
@@ -206,40 +219,86 @@ const params = {
   followCamera: false,
 };
 
-function applyCameraFollow() {
-  if (params.followCamera) {
-    const cam = cameras[params.cameraIndex];
-    if (cameraControls) {
-      cameraControls.enableOrbit = false;
-      cameraControls.enableFly = false;
-      cameraControls.enablePan = false;
-    }
-    cameraEntity.setPosition(cam.position.x, cam.position.y, cam.position.z);
-    cameraEntity.setLocalRotation(
-      cam.quaternion.x,
-      cam.quaternion.y,
-      cam.quaternion.z,
-      cam.quaternion.w,
-    );
-    (cameraEntity.camera as any).fov = cam.fov;
-  } else {
-    if (cameraControls) {
-      cameraControls.enableOrbit = true;
-      cameraControls.enableFly = true;
-      cameraControls.enablePan = true;
-    }
+const transition = {
+  active: false,
+  targetPos: new pc.Vec3(),
+  targetQuat: new pc.Quat(),
+  targetFov: 60,
+  progress: 1,
+};
+
+const LERP_SPEED = 4;
+
+function startTransition() {
+  const cam = cameras[params.cameraIndex];
+  transition.targetPos.copy(cam.position);
+  transition.targetQuat.copy(cam.quaternion);
+  transition.targetFov = cam.fov;
+  transition.active = true;
+  transition.progress = 0;
+
+  if (cameraControls) {
+    cameraControls.enableOrbit = false;
+    cameraControls.enableFly = false;
+    cameraControls.enablePan = false;
   }
 }
 
-// ---- Render loop: draw frustum lines ----
+function releaseCamera() {
+  transition.active = false;
+  if (cameraControls) {
+    cameraControls.enableOrbit = true;
+    cameraControls.enableFly = true;
+    cameraControls.enablePan = true;
+  }
+}
 
-app.on('update', () => {
+// ---- Render loop ----
+
+const _lerpPos = new pc.Vec3();
+const _lerpQuat = new pc.Quat();
+
+// TEMP: log camera position every 2s
+let _lastLog = 0;
+app.on('update', (dt: number) => {
+  const now = performance.now();
+  if (now - _lastLog > 2000) {
+    _lastLog = now;
+    const p = cameraEntity.getPosition();
+    const fp = cameraControls?.focusPoint;
+    console.log(
+      `[camera] pos: (${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)})` +
+      (fp ? ` | focus: (${fp.x.toFixed(3)}, ${fp.y.toFixed(3)}, ${fp.z.toFixed(3)})` : '')
+    );
+  }
+
   if (params.showCones) {
     app.drawLineArrays(frustumPositions, frustumColor, false);
   }
 
-  if (params.followCamera) {
-    applyCameraFollow();
+  if (transition.active) {
+    transition.progress = Math.min(transition.progress + dt * LERP_SPEED, 1);
+    const t = 1 - Math.pow(1 - transition.progress, 3); // ease-out cubic
+
+    const curPos = cameraEntity.getPosition();
+    _lerpPos.lerp(curPos, transition.targetPos, t);
+    cameraEntity.setPosition(_lerpPos);
+
+    const curQuat = cameraEntity.getLocalRotation();
+    _lerpQuat.slerp(curQuat, transition.targetQuat, t);
+    cameraEntity.setLocalRotation(_lerpQuat);
+
+    const curFov = (cameraEntity.camera as any).fov as number;
+    (cameraEntity.camera as any).fov = curFov + (transition.targetFov - curFov) * t;
+
+    if (transition.progress >= 1) {
+      transition.active = false;
+    }
+  } else if (params.followCamera) {
+    const cam = cameras[params.cameraIndex];
+    cameraEntity.setPosition(cam.position.x, cam.position.y, cam.position.z);
+    cameraEntity.setLocalRotation(cam.quaternion.x, cam.quaternion.y, cam.quaternion.z, cam.quaternion.w);
+    (cameraEntity.camera as any).fov = cam.fov;
   }
 });
 
@@ -252,13 +311,25 @@ initOverlay({
   initialFollowCamera: params.followCamera,
   onCameraIndexChange(index) {
     params.cameraIndex = index;
-    applyCameraFollow();
+    transition.active = false;
   },
   onShowConesChange(show) {
     params.showCones = show;
   },
   onFollowCameraChange(follow) {
     params.followCamera = follow;
-    applyCameraFollow();
+    if (follow) {
+      startTransition();
+    } else {
+      releaseCamera();
+    }
+  },
+  onResetCamera() {
+    params.followCamera = false;
+    transition.active = false;
+    releaseCamera();
+    if (cameraControls) {
+      cameraControls.reset(defaultFocusPoint, defaultCameraPos);
+    }
   },
 });

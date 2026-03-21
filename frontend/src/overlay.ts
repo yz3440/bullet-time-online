@@ -2,7 +2,7 @@
  * Overlay UI: top bar controls + marquee ticker + 360 product viewer (no React).
  */
 
-import { createElement, Eye, EyeOff, Video, VideoOff } from 'lucide';
+import { createElement, Eye, EyeOff, Video, VideoOff, RotateCcw } from 'lucide';
 
 // ---- Top Bar Config ----
 
@@ -14,6 +14,7 @@ export interface TopBarConfig {
   onCameraIndexChange: (index: number) => void;
   onShowConesChange: (show: boolean) => void;
   onFollowCameraChange: (follow: boolean) => void;
+  onResetCamera: () => void;
 }
 
 export interface TopBarHandle {
@@ -59,7 +60,7 @@ function createIconToggle(
 function createTopBar(config: TopBarConfig): { element: HTMLElement; handle: TopBarHandle } {
   const bar = document.createElement('div');
   bar.className =
-    'fixed top-0 left-0 right-0 flex items-center gap-3 px-4 py-2 ' +
+    'fixed top-0 left-0 right-0 flex items-center gap-3 px-4 py-px ' +
     'bg-black/70 backdrop-blur-sm';
   bar.style.zIndex = '9999';
   bar.style.pointerEvents = 'auto';
@@ -90,8 +91,17 @@ function createTopBar(config: TopBarConfig): { element: HTMLElement; handle: Top
     config.onCameraIndexChange(idx);
   });
 
+  const resetBtn = document.createElement('button');
+  resetBtn.className =
+    'w-9 h-9 flex items-center justify-center rounded transition-colors ' +
+    'hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-[#00FF41]/60 focus:outline-none';
+  resetBtn.title = 'Reset Camera';
+  resetBtn.appendChild(createElement(RotateCcw, { size: 18, color: '#00FF41', 'stroke-width': 1.5 }));
+  resetBtn.addEventListener('click', config.onResetCamera);
+
   bar.appendChild(conesToggle);
   bar.appendChild(followToggle);
+  bar.appendChild(resetBtn);
   bar.appendChild(slider);
   bar.appendChild(label);
 
