@@ -1,31 +1,33 @@
 # Bullet Time Online
 
-Reconstructed bullet time scene from The Matrix, rendered as a Gaussian splat with reverse-engineered camera data.
+Reconstructing the bullet time scene from The Matrix as a Gaussian splat, using reverse-engineered camera data from the original footage.
 
-## Stack
-
-- **Viewer**: [PlayCanvas Engine](https://playcanvas.com/) with `GSplatComponent` — loads `.sog` (Spatially Ordered Gaussians), PlayCanvas's super-compressed splat format (~90% smaller than raw PLY)
-- **Data pipeline**: Vite plugin in `vite.config.ts` — parses COLMAP binary camera/image files to JSON, converts the source `.ply` splat to `.sog` via [`@playcanvas/splat-transform`](https://github.com/playcanvas/splat-transform) (WebGPU, outlier filter, full SH3)
-- **Frontend build**: Vite + TypeScript + Tailwind
-
-## Data flow
+## Project structure
 
 ```
-reconstruction-data/colmap/{cameras,images}.bin
-  → vite plugin (buildStart)
-  → frontend/src/data/postshot-colmap.json   (camera poses, intrinsics)
+original-frames/          Raw frames extracted from the Blu-ray
+bluray-images/            Image processing pipeline (crop, resize, center)
+reconstruction-data/
+  colmap/                 COLMAP sparse reconstruction output (cameras, images, points)
+  splats/                 Source Gaussian splat (.ply, 23 MB)
+frontend/                 Web viewer — see frontend/README.md
+```
 
-reconstruction-data/splats/bullet-time.ply   (23 MB, raw Gaussian splat)
-  → vite plugin (splat-transform --filter-sphere, WebGPU k-means)
+## Reconstruction pipeline
+
+```
+original-frames/*.jpg
+  → Postshot / COLMAP
+  → reconstruction-data/colmap/{cameras,images,points3D}.bin
+  → reconstruction-data/splats/bullet-time.ply
+
+reconstruction-data/colmap/{cameras,images}.bin
+  → Vite plugin (parse-colmap.ts)
+  → frontend/src/data/postshot-colmap.json   (camera poses + intrinsics)
+
+reconstruction-data/splats/bullet-time.ply
+  → Vite plugin (splat-transform, WebGPU k-means, outlier filter, SH3)
   → frontend/public/splats/bullet-time.sog   (~3 MB, SOG format)
 ```
 
-Both outputs are committed so the pipeline only re-runs when sources change (timestamp check).
-
-## Setup
-
-```bash
-cd frontend
-bun install
-bun dev
-```
+Both derived outputs are committed so the frontend works without re-running the pipeline.
