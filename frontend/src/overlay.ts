@@ -108,22 +108,42 @@ function createTopBar(config: TopBarConfig): { element: HTMLElement; handle: Top
 // ---- Marquee ----
 
 function createMarquee(): HTMLElement {
-  const contentHTML = `<span class="text-[#00FF41] font-led px-0 text-2xl bg-black">original <span class="text-blue-400 px-1">bullet time</span> footage ripped from (↑) this <span class="text-blue-400 px-1">blu-ray</span>&nbsp; disc (↑)<span class="px-4">/</span></span>`;
-  const repeated = contentHTML.repeat(4);
-  const extraForWide = `<span class="hidden 3xl:inline">${contentHTML.repeat(4)}</span>`;
+  const unitHTML = `<span class="text-[#00FF41] font-led px-0 text-2xl bg-black">original <span class="text-blue-400 px-1">bullet time</span> footage ripped from (↑) this <span class="text-blue-400 px-1">blu-ray</span>&nbsp; disc (↑)<span class="px-4">/</span></span>`;
+  const COPIES = 10;
 
   const wrapper = document.createElement('div');
-  wrapper.className = 'absolute bottom-0 z-20 w-screen font-led shadow-xl shadow-neutral-800';
-  wrapper.innerHTML = `
-    <div class="relative flex flex-row overflow-x-hidden">
-      <div class="animate-marquee whitespace-nowrap bg-black text-white">
-        ${repeated}${extraForWide}
-      </div>
-      <div class="absolute top-0 z-10 animate-marquee2 whitespace-nowrap bg-black text-white">
-        ${repeated}${extraForWide}
-      </div>
-    </div>
-  `;
+  wrapper.className = 'absolute bottom-0 z-20 w-screen overflow-hidden font-led select-none pointer-events-none';
+  wrapper.style.textShadow = '0 0 8px #00FF41, 0 0 20px rgba(0,255,65,0.4)';
+
+  const track = document.createElement('div');
+  track.className = 'whitespace-nowrap bg-black text-white';
+  track.style.willChange = 'transform';
+  track.innerHTML = unitHTML.repeat(COPIES);
+  wrapper.appendChild(track);
+
+  let offset = 0;
+  const speed = 60;
+  let lastTime = 0;
+  let copyWidth = 0;
+
+  function tick(now: number) {
+    if (!lastTime) { lastTime = now; }
+    const dt = (now - lastTime) / 1000;
+    lastTime = now;
+    offset -= speed * dt;
+
+    if (!copyWidth && track.scrollWidth > 0) {
+      copyWidth = track.scrollWidth / COPIES;
+    }
+    if (copyWidth && Math.abs(offset) >= copyWidth) {
+      offset += copyWidth;
+    }
+
+    track.style.transform = `translateX(${offset}px)`;
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
   return wrapper;
 }
 
@@ -219,17 +239,12 @@ function createProductCorner(position: 'left' | 'right'): HTMLElement {
     ? 'fixed bottom-0 left-0 z-10 p-8 md:flex flex-col gap-2 w-36 md:w-auto hidden'
     : 'fixed bottom-0 right-0 z-10 p-8 md:flex flex-col gap-2 w-36 md:w-auto flex';
 
-  const hoverTranslate = position === 'left'
-    ? 'hover:translate-x-1/2'
-    : 'hover:-translate-x-1/2';
-
   const outer = document.createElement('div');
   outer.className = posClasses;
 
   const scaleWrap = document.createElement('div');
-  scaleWrap.className = `mx-auto hover:scale-[200%] hover:-translate-y-1/2 ${hoverTranslate} transition-all group`;
+  scaleWrap.className = 'mx-auto group';
 
-  // Buy now label (visible on hover)
   const buyLabel = document.createElement('div');
   buyLabel.className = 'text-center hidden group-hover:block font-led text-[#00FF41] animate-led-text-glow-green';
   buyLabel.innerHTML = `<span class="px-2 py-1 bg-black mx-auto"><a href="https://www.blu-ray.com/movies/The-Matrix-Blu-ray/75475/" target="_blank">BUY NOW</a></span>`;

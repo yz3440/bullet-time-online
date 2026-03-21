@@ -22,14 +22,6 @@ const config: Config = {
         ],
       },
       keyframes: {
-        marquee: {
-          '0%': { transform: 'translateX(0%)' },
-          '100%': { transform: 'translateX(-100%)' },
-        },
-        marquee2: {
-          '0%': { transform: 'translateX(100%)' },
-          '100%': { transform: 'translateX(0%)' },
-        },
         'led-text-glow-green': {
           '0%': {
             textShadow:
@@ -47,8 +39,6 @@ const config: Config = {
       },
       animation: {
         'led-text-glow-green': 'led-text-glow-green 2s linear infinite',
-        marquee: 'marquee 20s linear infinite',
-        marquee2: 'marquee2 20s linear infinite',
       },
     },
   },
