@@ -1,7 +1,4 @@
-import * as THREE from 'three';
-import * as GaussianSplats3D from '@mkkellogg/gaussian-splats-3d';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { Pane } from 'tweakpane';
+import * as pc from 'playcanvas';
 import colmapData from '@/data/postshot-colmap.json';
 import './index.css';
 import { initOverlay } from './overlay';
@@ -20,48 +17,52 @@ interface ColmapImage {
 }
 
 interface ParsedCamera {
-  position: THREE.Vector3;
-  quaternion: THREE.Quaternion;
+  position: pc.Vec3;
+  quaternion: pc.Quat;
   fov: number;
 }
 
 // ---- Leveling rotation (derived from camera 0, assumed level in reality) ----
 
 const cam0Raw = (colmapData as ColmapImage[])[0];
-// Camera 0 c2w orientation in Three.js (OpenGL) convention
-const _cam0_w2c = new THREE.Quaternion(cam0Raw.qx, cam0Raw.qy, cam0Raw.qz, cam0Raw.qw);
-const _cam0_c2w = _cam0_w2c.clone().invert();
-_cam0_c2w.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI));
 
-// Extract camera 0's up vector and forward vector in the un-leveled world
-const cam0Up = new THREE.Vector3(0, 1, 0).applyQuaternion(_cam0_c2w);
-const cam0Fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(_cam0_c2w);
+const _cam0_w2c = new pc.Quat(cam0Raw.qx, cam0Raw.qy, cam0Raw.qz, cam0Raw.qw);
+const _cam0_c2w = new pc.Quat().invert(_cam0_w2c);
+_cam0_c2w.mul(new pc.Quat().setFromAxisAngle(pc.Vec3.RIGHT, 180));
 
-// Build a right-handed orthonormal basis from camera 0's up and forward
-const cam0Right = new THREE.Vector3().crossVectors(cam0Fwd, cam0Up).normalize();
-// Z = cross(X, Y) for right-handed system
-const cam0Z = new THREE.Vector3().crossVectors(cam0Right, cam0Up).normalize();
+const cam0Up = _cam0_c2w.transformVector(new pc.Vec3(0, 1, 0));
+const cam0Fwd = _cam0_c2w.transformVector(new pc.Vec3(0, 0, -1));
 
-// This matrix maps level-world axes to COLMAP-world axes; invert to go the other way
-const levelMatrix = new THREE.Matrix4().makeBasis(cam0Right, cam0Up, cam0Z);
-const levelRotation = new THREE.Quaternion().setFromRotationMatrix(levelMatrix).invert();
+const cam0Right = new pc.Vec3().cross(cam0Fwd, cam0Up).normalize();
+const cam0Z = new pc.Vec3().cross(cam0Right, cam0Up).normalize();
+
+// Column-major: columns are right, up, z
+const levelMatrix = new pc.Mat4();
+levelMatrix.set([
+  cam0Right.x, cam0Right.y, cam0Right.z, 0,
+  cam0Up.x, cam0Up.y, cam0Up.z, 0,
+  cam0Z.x, cam0Z.y, cam0Z.z, 0,
+  0, 0, 0, 1,
+]);
+const levelRotation = new pc.Quat().setFromMat4(levelMatrix).invert();
 
 // ---- Parse cameras ----
 
 function parseColmapCamera(raw: ColmapImage): ParsedCamera {
-  const position = new THREE.Vector3(raw.center[0], raw.center[1], raw.center[2]);
+  const position = new pc.Vec3(raw.center[0], raw.center[1], raw.center[2]);
 
-  // COLMAP quaternion (qw, qx, qy, qz) → world-to-camera in OpenCV convention
-  const q_w2c = new THREE.Quaternion(raw.qx, raw.qy, raw.qz, raw.qw);
-  const q_c2w = q_w2c.clone().invert();
+  const q_w2c = new pc.Quat(raw.qx, raw.qy, raw.qz, raw.qw);
+  const q_c2w = new pc.Quat().invert(q_w2c);
 
   // OpenCV→OpenGL flip: 180° around local X
-  const flipX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
-  q_c2w.multiply(flipX);
+  q_c2w.mul(new pc.Quat().setFromAxisAngle(pc.Vec3.RIGHT, 180));
 
   // Apply leveling rotation to position and orientation
-  position.applyQuaternion(levelRotation);
-  q_c2w.premultiply(levelRotation);
+  const leveledPos = levelRotation.transformVector(position);
+  position.copy(leveledPos);
+
+  const leveledQuat = new pc.Quat().mul2(levelRotation, q_c2w);
+  q_c2w.copy(leveledQuat);
 
   // Vertical FOV from OPENCV intrinsics: params = [fx, fy, cx, cy, ...]
   const fy = raw.params[1];
@@ -72,144 +73,162 @@ function parseColmapCamera(raw: ColmapImage): ParsedCamera {
 
 const cameras: ParsedCamera[] = (colmapData as ColmapImage[]).map(parseColmapCamera);
 
-// Centroid of all cameras
-const centroid = new THREE.Vector3();
+const centroid = new pc.Vec3();
 for (const cam of cameras) centroid.add(cam.position);
-centroid.divideScalar(cameras.length);
+centroid.mulScalar(1 / cameras.length);
 
-// ---- Scene setup ----
+// ---- Frustum line geometry (pre-computed, world-space) ----
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
-document.getElementById('root')!.appendChild(renderer.domElement);
+function buildFrustumLines(cams: ParsedCamera[]): Float32Array {
+  const d = 0.08;
+  const hw = 0.03;
+  const hh = 0.02;
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x000000);
+  // 8 line segments per frustum = 16 vertices = 48 floats
+  const floatsPerCam = 48;
+  const arr = new Float32Array(cams.length * floatsPerCam);
 
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
-camera.position.set(centroid.x + 5, centroid.y + 5, centroid.z + 5);
+  const localVerts = [
+    new pc.Vec3(0, 0, 0), new pc.Vec3(-hw, hh, -d),
+    new pc.Vec3(0, 0, 0), new pc.Vec3(hw, hh, -d),
+    new pc.Vec3(0, 0, 0), new pc.Vec3(hw, -hh, -d),
+    new pc.Vec3(0, 0, 0), new pc.Vec3(-hw, -hh, -d),
+    new pc.Vec3(-hw, hh, -d), new pc.Vec3(hw, hh, -d),
+    new pc.Vec3(hw, hh, -d), new pc.Vec3(hw, -hh, -d),
+    new pc.Vec3(hw, -hh, -d), new pc.Vec3(-hw, -hh, -d),
+    new pc.Vec3(-hw, -hh, -d), new pc.Vec3(-hw, hh, -d),
+  ];
 
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.copy(centroid);
-controls.update();
+  const tmp = new pc.Vec3();
+  for (let c = 0; c < cams.length; c++) {
+    const cam = cams[c];
+    const base = c * floatsPerCam;
+    for (let v = 0; v < 16; v++) {
+      cam.quaternion.transformVector(localVerts[v], tmp);
+      tmp.add(cam.position);
+      arr[base + v * 3 + 0] = tmp.x;
+      arr[base + v * 3 + 1] = tmp.y;
+      arr[base + v * 3 + 2] = tmp.z;
+    }
+  }
 
-// Axes
-scene.add(new THREE.AxesHelper(1));
-
-// ---- Camera frustum cones ----
-
-function createCameraFrustums(cams: ParsedCamera[], coneScale: number): THREE.Group {
-  const group = new THREE.Group();
-  const coneGeo = new THREE.ConeGeometry(0.03 * coneScale, 0.08 * coneScale, 4);
-  coneGeo.rotateX(Math.PI / 2);
-
-  cams.forEach((cam, i) => {
-    const color = new THREE.Color().setHSL(i / cams.length, 1, 0.5);
-    const mat = new THREE.MeshBasicMaterial({ color });
-    const cone = new THREE.Mesh(coneGeo, mat);
-    cone.position.copy(cam.position);
-    cone.quaternion.copy(cam.quaternion);
-    group.add(cone);
-  });
-
-  return group;
+  return arr;
 }
 
-let frustumGroup = createCameraFrustums(cameras, 1);
-scene.add(frustumGroup);
+const frustumPositions = Array.from(buildFrustumLines(cameras));
+const frustumColor = new pc.Color(0, 1, 0.255, 0.6);
 
-// ---- Gaussian splat viewer ----
+// ---- PlayCanvas Application ----
 
-const viewer = new GaussianSplats3D.Viewer({
-  threeScene: scene,
-  renderer,
-  camera,
-  selfDrivenMode: false,
-  useBuiltInControls: false,
+const canvas = document.createElement('canvas');
+document.getElementById('root')!.appendChild(canvas);
+
+const app = new pc.Application(canvas, {
+  graphicsDeviceOptions: { antialias: false },
 });
+app.setCanvasFillMode(pc.FILLMODE_FILL_WINDOW);
+app.setCanvasResolution(pc.RESOLUTION_AUTO);
+app.start();
+window.addEventListener('resize', () => app.resizeCanvas());
 
-viewer
-  .addSplatScene('/splats/bullet-time.ply', {
-    showLoadingUI: true,
-    rotation: [levelRotation.x, levelRotation.y, levelRotation.z, levelRotation.w],
-  })
-  .then(() => {
-    viewer.start();
-  });
+// Import camera-controls script class (must happen after Application is created)
+const { CameraControls } = await import('playcanvas/scripts/esm/camera-controls.mjs');
 
-// ---- Tweakpane ----
+// ---- Load assets ----
+
+const splatAsset = new pc.Asset('splat', 'gsplat', { url: '/splats/bullet-time.sog' });
+const loader = new pc.AssetListLoader([splatAsset], app.assets);
+await new Promise<void>((resolve) => loader.load(resolve));
+
+// ---- Camera ----
+
+const cameraEntity = new pc.Entity('Camera');
+cameraEntity.addComponent('camera', {
+  clearColor: new pc.Color(0, 0, 0, 1),
+  nearClip: 0.1,
+  farClip: 500,
+  fov: 60,
+});
+cameraEntity.addComponent('script');
+cameraEntity.script!.create(CameraControls as any);
+cameraEntity.setPosition(centroid.x + 5, centroid.y + 5, centroid.z + 5);
+app.root.addChild(cameraEntity);
+
+const cameraControls = (cameraEntity.script as any)?.cameraControls;
+if (cameraControls) {
+  cameraControls.focusPoint = centroid.clone();
+}
+
+// ---- Splat ----
+
+const splatEntity = new pc.Entity('Splat');
+splatEntity.addComponent('gsplat', { asset: splatAsset });
+(splatEntity.gsplat as any).material?.setDefine('GSPLAT_AA', true);
+(splatEntity.gsplat as any).highQualitySH = true;
+
+// Apply leveling rotation to the splat
+const levelEuler = new pc.Vec3();
+levelRotation.getEulerAngles(levelEuler);
+splatEntity.setLocalEulerAngles(levelEuler.x, levelEuler.y, levelEuler.z);
+
+app.root.addChild(splatEntity);
+
+// ---- State ----
 
 const params = {
-  showSplat: true,
-  coneScale: 1,
   showCones: true,
   cameraIndex: 0,
   followCamera: false,
 };
 
-const pane = new Pane();
-pane.addBinding(params, 'showCones', { label: 'Show Cones' }).on('change', (ev) => {
-  frustumGroup.visible = ev.value;
-});
-pane
-  .addBinding(params, 'coneScale', { label: 'Cone Scale', min: 0.1, max: 20, step: 0.1 })
-  .on('change', (ev) => {
-    scene.remove(frustumGroup);
-    frustumGroup = createCameraFrustums(cameras, ev.value);
-    frustumGroup.visible = params.showCones;
-    scene.add(frustumGroup);
-  });
-
-pane.addBinding(params, 'followCamera', { label: 'Follow Camera' }).on('change', (ev) => {
-  controls.enabled = !ev.value;
-  if (ev.value) {
+function applyCameraFollow() {
+  if (params.followCamera) {
     const cam = cameras[params.cameraIndex];
-    camera.position.copy(cam.position);
-    camera.quaternion.copy(cam.quaternion);
-    camera.fov = cam.fov;
-    camera.updateProjectionMatrix();
-  }
-});
-
-pane
-  .addBinding(params, 'cameraIndex', {
-    label: 'Camera',
-    min: 0,
-    max: cameras.length - 1,
-    step: 1,
-  })
-  .on('change', (ev) => {
-    if (params.followCamera) {
-      const cam = cameras[ev.value];
-      camera.position.copy(cam.position);
-      camera.quaternion.copy(cam.quaternion);
-      camera.fov = cam.fov;
-      camera.updateProjectionMatrix();
+    if (cameraControls) {
+      cameraControls.enableOrbit = false;
+      cameraControls.enableFly = false;
+      cameraControls.enablePan = false;
     }
-  });
-
-// ---- Render loop ----
-
-function animate() {
-  requestAnimationFrame(animate);
-  if (!params.followCamera) {
-    controls.update();
+    cameraEntity.setPosition(cam.position.x, cam.position.y, cam.position.z);
+    cameraEntity.setLocalRotation(cam.quaternion.x, cam.quaternion.y, cam.quaternion.z, cam.quaternion.w);
+    (cameraEntity.camera as any).fov = cam.fov;
+  } else {
+    if (cameraControls) {
+      cameraControls.enableOrbit = true;
+      cameraControls.enableFly = true;
+      cameraControls.enablePan = true;
+    }
   }
-  viewer.update();
-  viewer.render();
 }
 
-animate();
+// ---- Render loop: draw frustum lines ----
 
-// ---- Resize ----
+app.on('update', () => {
+  if (params.showCones) {
+    app.drawLineArrays(frustumPositions, frustumColor, false);
+  }
 
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  if (params.followCamera) {
+    applyCameraFollow();
+  }
 });
 
 // ---- Overlay UI ----
 
-initOverlay();
+initOverlay({
+  cameraCount: cameras.length,
+  initialCameraIndex: params.cameraIndex,
+  initialShowCones: params.showCones,
+  initialFollowCamera: params.followCamera,
+  onCameraIndexChange(index) {
+    params.cameraIndex = index;
+    applyCameraFollow();
+  },
+  onShowConesChange(show) {
+    params.showCones = show;
+  },
+  onFollowCameraChange(follow) {
+    params.followCamera = follow;
+    applyCameraFollow();
+  },
+});
