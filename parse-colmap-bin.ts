@@ -1,11 +1,11 @@
 /**
  * Parse COLMAP binary files (cameras.bin + images.bin) and output JSON.
  *
- * Usage: bun scripts/parse-colmap-bin.ts <colmap-dir> <output-json>
- * Example: bun scripts/parse-colmap-bin.ts public/colmap src/data/postshot-colmap.json
+ * Usage: bun parse-colmap-bin.ts <colmap-dir> <output-json>
+ * Example: bun parse-colmap-bin.ts reconstruction-data/colmap frontend/src/data/postshot-colmap.json
  */
 
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, copyFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
 const CAMERA_MODELS: Record<number, { name: string; numParams: number }> = {
@@ -115,8 +115,8 @@ function parseImagesBin(buf: Buffer, cameras: ReturnType<typeof parseCamerasBin>
 
 // ---- Main ----
 
-const colmapDir = process.argv[2] || 'public/colmap';
-const outputPath = process.argv[3] || 'src/data/postshot-colmap.json';
+const colmapDir = process.argv[2] || 'reconstruction-data/colmap';
+const outputPath = process.argv[3] || 'frontend/src/data/postshot-colmap.json';
 
 const cameraBuf = readFileSync(join(colmapDir, 'cameras.bin'));
 const imageBuf = readFileSync(join(colmapDir, 'images.bin'));
@@ -126,3 +126,10 @@ const images = parseImagesBin(imageBuf, cameras);
 
 writeFileSync(outputPath, JSON.stringify(images, null, 2));
 console.log(`Parsed ${Object.keys(cameras).length} cameras, ${images.length} images → ${outputPath}`);
+
+// Copy splat model to frontend
+const splatsDir = join('reconstruction-data', 'splats');
+const destDir = join('frontend', 'public', 'splats');
+mkdirSync(destDir, { recursive: true });
+copyFileSync(join(splatsDir, 'bullet-time.ply'), join(destDir, 'bullet-time.ply'));
+console.log(`Copied splat model → ${join(destDir, 'bullet-time.ply')}`);
