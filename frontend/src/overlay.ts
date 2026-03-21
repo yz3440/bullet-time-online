@@ -108,23 +108,32 @@ function createTopBar(config: TopBarConfig): { element: HTMLElement; handle: Top
 // ---- Marquee ----
 
 function createMarquee(): HTMLElement {
-  const unitHTML = `<span class="text-[#00FF41] font-led px-0 text-2xl bg-black">original <span class="text-blue-400 px-1">bullet time</span> footage ripped from (↑) this <span class="text-blue-400 px-1">blu-ray</span>&nbsp; disc (↑)<span class="px-4">/</span></span>`;
-  const COPIES = 10;
+  const unitHTML = `<span class="text-[#00FF41] font-led px-0 text-base">original <span class="text-blue-400 px-1">bullet time</span> footage ripped from (↑) this <span class="text-blue-400 px-1">blu-ray</span>&nbsp; disc (↑)<span class="px-4">/</span></span>`;
 
   const wrapper = document.createElement('div');
-  wrapper.className = 'absolute bottom-0 z-20 w-screen overflow-hidden font-led select-none pointer-events-none';
+  wrapper.className = 'absolute bottom-0 z-20 w-screen overflow-hidden font-led select-none pointer-events-none bg-black';
   wrapper.style.textShadow = '0 0 8px #00FF41, 0 0 20px rgba(0,255,65,0.4)';
 
   const track = document.createElement('div');
-  track.className = 'whitespace-nowrap bg-black text-white';
+  track.className = 'whitespace-nowrap text-white py-px';
   track.style.willChange = 'transform';
-  track.innerHTML = unitHTML.repeat(COPIES);
+
+  // Two identical inline-block halves so we can measure the first one exactly
+  const halfA = document.createElement('span');
+  halfA.style.display = 'inline-block';
+  halfA.innerHTML = unitHTML.repeat(6);
+  const halfB = document.createElement('span');
+  halfB.style.display = 'inline-block';
+  halfB.innerHTML = unitHTML.repeat(6);
+
+  track.appendChild(halfA);
+  track.appendChild(halfB);
   wrapper.appendChild(track);
 
   let offset = 0;
   const speed = 60;
   let lastTime = 0;
-  let copyWidth = 0;
+  let halfWidth = 0;
 
   function tick(now: number) {
     if (!lastTime) { lastTime = now; }
@@ -132,14 +141,14 @@ function createMarquee(): HTMLElement {
     lastTime = now;
     offset -= speed * dt;
 
-    if (!copyWidth && track.scrollWidth > 0) {
-      copyWidth = track.scrollWidth / COPIES;
+    if (!halfWidth) {
+      halfWidth = halfA.offsetWidth;
     }
-    if (copyWidth && Math.abs(offset) >= copyWidth) {
-      offset += copyWidth;
+    if (halfWidth && -offset >= halfWidth) {
+      offset += halfWidth;
     }
 
-    track.style.transform = `translateX(${offset}px)`;
+    track.style.transform = `translate3d(${offset}px,0,0)`;
     requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
