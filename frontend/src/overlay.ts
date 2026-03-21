@@ -17,6 +17,7 @@ export interface TopBarConfig {
 
 export interface TopBarHandle {
   setCameraIndex: (index: number) => void;
+  setFollowCamera: (active: boolean) => void;
 }
 
 // ---- Custom Slider ----
@@ -24,6 +25,7 @@ export interface TopBarHandle {
 interface SliderHandle {
   element: HTMLElement;
   setValue: (index: number) => void;
+  setActive: (active: boolean) => void;
 }
 
 function createCustomSlider(
@@ -33,6 +35,10 @@ function createCustomSlider(
 ): SliderHandle {
   const maxIdx = count - 1;
   let current = initial;
+  let isActive = false;
+
+  const ACTIVE_COLOR = '#00FF41';
+  const INACTIVE_COLOR = '#888';
 
   const container = document.createElement('div');
   container.className = 'flex-1 flex flex-col cursor-pointer select-none';
@@ -77,7 +83,7 @@ function createCustomSlider(
 
   const fill = document.createElement('div');
   fill.className = 'absolute left-0 top-1/2 -translate-y-1/2 h-[3px] rounded-sm';
-  fill.style.background = 'rgba(0,255,65,0.3)';
+  fill.style.background = 'rgba(136,136,136,0.3)';
   trackRow.appendChild(fill);
 
   const thumb = document.createElement('div');
@@ -85,7 +91,7 @@ function createCustomSlider(
   thumb.style.width = '12px';
   thumb.style.height = '12px';
   thumb.style.background = '#00FF41';
-  thumb.style.boxShadow = '0 0 6px #00ff4180';
+  thumb.style.animation = 'knob-glow 2s ease-in-out infinite';
   thumb.style.transform = 'translate(-50%, -50%)';
   thumb.style.transition = 'none';
   thumb.style.pointerEvents = 'none';
@@ -100,6 +106,15 @@ function createCustomSlider(
 
   const allTicks = [topTicks.ticks, bottomTicks.ticks];
 
+  function applyColors() {
+    const color = isActive ? ACTIVE_COLOR : INACTIVE_COLOR;
+    fill.style.background = isActive ? 'rgba(0,255,65,0.3)' : 'rgba(136,136,136,0.3)';
+    for (const tickSet of allTicks) {
+      tickSet[current].style.background = color;
+      tickSet[current].style.boxShadow = `0 0 4px ${color}`;
+    }
+  }
+
   function update(index: number) {
     const prev = current;
     current = Math.max(0, Math.min(maxIdx, index));
@@ -111,9 +126,8 @@ function createCustomSlider(
     for (const tickSet of allTicks) {
       tickSet[prev]?.style.setProperty('background', '#555');
       tickSet[prev]?.style.setProperty('box-shadow', 'none');
-      tickSet[current].style.background = '#00FF41';
-      tickSet[current].style.boxShadow = '0 0 4px #00FF41';
     }
+    applyColors();
 
     container.setAttribute('aria-valuenow', String(current));
   }
@@ -168,15 +182,24 @@ function createCustomSlider(
     setValue(index: number) {
       update(index);
     },
+    setActive(active: boolean) {
+      isActive = active;
+      applyColors();
+    },
   };
 }
 
 // ---- Bistable Switch ----
 
+interface BistableSwitchHandle {
+  element: HTMLElement;
+  setState: (value: boolean) => void;
+}
+
 function createBistableSwitch(
   initial: boolean,
   onChange: (active: boolean) => void,
-): HTMLElement {
+): BistableSwitchHandle {
   let active = initial;
 
   const outer = document.createElement('div');
@@ -236,7 +259,13 @@ function createBistableSwitch(
   });
 
   render();
-  return outer;
+  return {
+    element: outer,
+    setState(value: boolean) {
+      active = value;
+      render();
+    },
+  };
 }
 
 // ---- Top Bar ----
@@ -249,8 +278,11 @@ function createTopBar(config: TopBarConfig): { element: HTMLElement; handle: Top
   bar.style.zIndex = '9999';
   bar.style.pointerEvents = 'auto';
 
-  const followToggle = createBistableSwitch(config.initialFollowCamera, config.onFollowCameraChange);
-  followToggle.title = 'Follow Camera';
+  const followToggle = createBistableSwitch(config.initialFollowCamera, (active) => {
+    slider.setActive(active);
+    config.onFollowCameraChange(active);
+  });
+  followToggle.element.title = 'Follow Camera';
 
   const slider = createCustomSlider(config.cameraCount, config.initialCameraIndex, (idx) => {
     updateLabel(idx);
@@ -275,12 +307,16 @@ function createTopBar(config: TopBarConfig): { element: HTMLElement; handle: Top
   bar.appendChild(resetBtn);
   bar.appendChild(slider.element);
   bar.appendChild(label);
-  bar.appendChild(followToggle);
+  bar.appendChild(followToggle.element);
 
   const handle: TopBarHandle = {
     setCameraIndex(index: number) {
       slider.setValue(index);
       updateLabel(index);
+    },
+    setFollowCamera(active: boolean) {
+      followToggle.setState(active);
+      slider.setActive(active);
     },
   };
 

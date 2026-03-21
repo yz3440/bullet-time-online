@@ -39,3 +39,8 @@ body {
     text-wrap: balance;
   }
 }
+
+@keyframes knob-glow {
+  0%, 100% { box-shadow: 0 0 4px #00ff4160; }
+  50% { box-shadow: 0 0 10px #00FF41, 0 0 20px #00ff4140; }
+}

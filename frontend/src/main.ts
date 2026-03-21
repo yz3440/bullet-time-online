@@ -307,7 +307,13 @@ const overlayHandle = initOverlay({
   initialFollowCamera: params.followCamera,
   onCameraIndexChange(index) {
     params.cameraIndex = index;
-    transition.active = false;
+    if (!params.followCamera) {
+      params.followCamera = true;
+      overlayHandle.setFollowCamera(true);
+      startTransition();
+    } else {
+      transition.active = false;
+    }
   },
   onFollowCameraChange(follow) {
     params.followCamera = follow;
@@ -325,6 +331,15 @@ const overlayHandle = initOverlay({
       cameraControls.reset(defaultFocusPoint, defaultCameraPos);
     }
   },
+});
+
+// Canvas drag auto-exits LOCK mode
+canvas.addEventListener('pointerdown', () => {
+  if (params.followCamera) {
+    params.followCamera = false;
+    releaseCamera();
+    overlayHandle.setFollowCamera(false);
+  }
 });
 
 // Scroll to advance camera in follow mode
