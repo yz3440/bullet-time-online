@@ -81,7 +81,7 @@ export function create360Viewer(options: ViewerOptions): HTMLElement {
 }
 
 export function createMarqueeElement(): HTMLElement {
-  const unitHTML = `<span class="text-[#00FF41] font-led px-0 text-base">original <span class="text-blue-400 px-1">bullet time</span> footage ripped from (↑) this <span class="text-blue-400 px-1">blu-ray</span>&nbsp; disc (↑)<span class="px-4">/</span></span>`;
+  const unitHTML = `<span class="text-[#00FF41] font-led px-0 text-base">ripped from <span class="text-blue-400 px-1">blu-ray</span><span class="px-4">/</span>aligned with <span class="text-blue-400 px-1">colmap</span><span class="px-4">/</span>reconstructed with <span class="text-blue-400 px-1">gaussian splatting</span><span class="px-4">/</span></span>`;
 
   const wrapper = document.createElement('div');
   wrapper.className = 'absolute bottom-0 z-20 w-screen overflow-hidden font-led select-none pointer-events-none bg-black';
