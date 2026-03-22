@@ -22,7 +22,7 @@ export function CameraRig() {
         onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'none'; }}
         onClick={() => callbacks.onFlyToRig()}
       >
-        FLY TO RIG
+        MATCH PERSPECTIVE
       </button>
     </div>
   );
