@@ -65,6 +65,13 @@ export function Slider({ count, value, active, playing, onChange, onPlayChange, 
     playing.value = false;
   }, [playing]);
 
+  useEffect(() => {
+    if (!playing.value && playIntervalRef.current) {
+      clearInterval(playIntervalRef.current);
+      playIntervalRef.current = null;
+    }
+  }, [playing.value]);
+
   const startPlayback = useCallback(() => {
     stopPlayback();
     playing.value = true;

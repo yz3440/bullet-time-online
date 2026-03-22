@@ -186,8 +186,9 @@ app.root.addChild(cameraEntity);
 const cameraControls = (cameraEntity.script as any)?.cameraControls;
 if (cameraControls) {
   cameraControls.focusPoint = defaultFocusPoint.clone();
+  cameraControls.enableFly = false;
 
-  // Remap: right-click → pan (orbit), middle-click → look (fly)
+  // Remap: right-click → pan (orbit)
   const origRead = cameraControls._desktopInput.read.bind(cameraControls._desktopInput);
   cameraControls._desktopInput.read = () => {
     const data = origRead();
@@ -253,7 +254,6 @@ function startTransition() {
 
   if (cameraControls) {
     cameraControls.enableOrbit = false;
-    cameraControls.enableFly = false;
     cameraControls.enablePan = false;
   }
 }
@@ -272,7 +272,6 @@ function flyToOrbit(pos: pc.Vec3, focus: pc.Vec3, fov: number) {
 
   if (cameraControls) {
     cameraControls.enableOrbit = false;
-    cameraControls.enableFly = false;
     cameraControls.enablePan = false;
   }
 }
@@ -281,7 +280,6 @@ function releaseCamera() {
   transition.active = false;
   if (cameraControls) {
     cameraControls.enableOrbit = true;
-    cameraControls.enableFly = true;
     cameraControls.enablePan = true;
   }
 }
@@ -388,13 +386,14 @@ const overlayHandle = initOverlay({
   },
 });
 
-// Canvas drag auto-exits LOCK mode
+// Canvas drag auto-exits LOCK mode and pauses playback
 canvas.addEventListener('pointerdown', () => {
   if (params.followCamera) {
     params.followCamera = false;
     releaseCamera();
     overlayHandle.setFollowCamera(false);
     overlayHandle.frameViewer.setActive(false);
+    overlayHandle.setPlaying(false);
   }
 });
 

@@ -78,7 +78,7 @@ export function TopBar() {
         }}
       />
       <span class='font-led text-[#00FF41] text-xs tabular-nums whitespace-nowrap shrink-0'>
-        {cameraIndex.value + 1}/{count}
+        <span style={{ display: 'inline-block', width: '3ch', textAlign: 'right' }}>{cameraIndex.value + 1}</span>/{count}
       </span>
       <BistableSwitch />
     </div>
