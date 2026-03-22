@@ -553,7 +553,7 @@ function create360Viewer(options: ViewerOptions): HTMLElement {
 }
 
 function createProductWindow(): HTMLElement {
-  const win = createFloatingWindow('Source Blu-ray', { width: 180, x: 20, y: 40, anchor: 'right' });
+  const win = createFloatingWindow('Source Blu-ray', { width: 180, x: 20, y: 310 });
 
   const viewer = create360Viewer({
     baseUrl: './bluray-box/',
@@ -722,7 +722,7 @@ function createFrameViewer(
   onSliderChange: (index: number) => void,
   onPlayChange?: (playing: boolean) => void,
 ): FrameViewerHandle {
-  const win = createFloatingWindow('', { width: 480, x: 80, y: 40 });
+  const win = createFloatingWindow('', { width: 480, x: 20, y: 40 });
   const titleSpan = win.element.querySelector('.font-led') as HTMLElement;
   titleSpan.innerHTML = `ORIGINAL FRAME <span style="color:#aaa;font-size:10px">(ripped from the Blu-ray)</span>`;
 
@@ -770,7 +770,7 @@ function createFrameViewer(
 // ---- BTS Video Window ----
 
 function createBtsVideoWindow(): HTMLElement {
-  const win = createFloatingWindow('', { width: 300, x: 580, y: 40 });
+  const win = createFloatingWindow('', { width: 300, x: 20, y: 40, anchor: 'right' });
   const titleSpan = win.element.querySelector('.font-led') as HTMLElement;
   titleSpan.innerHTML =
     'MATRIX BTS VIDEO ' +
@@ -804,7 +804,7 @@ function createBtsVideoWindow(): HTMLElement {
 // ---- Camera Rig Window ----
 
 function createRigWindow(onFlyToRig: () => void): HTMLElement {
-  const win = createFloatingWindow('', { width: 260, x: 580, y: 320 });
+  const win = createFloatingWindow('', { width: 260, x: 20, y: 300, anchor: 'right' });
   const titleSpan = win.element.querySelector('.font-led') as HTMLElement;
   titleSpan.innerHTML =
     'MATRIX CAMERA RIG ' +
