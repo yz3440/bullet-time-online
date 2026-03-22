@@ -21,24 +21,28 @@ export function Overlay() {
     {
       key: 'frame',
       title: <FrameViewerTitle />,
+      mobileTitle: 'ORIG. FRAME',
       width: 480, x: 20, y: 40,
       children: <FrameViewer />,
     },
     {
       key: 'bluray',
       title: 'Source Blu-ray',
+      mobileTitle: 'BLU-RAY',
       width: 180, x: 20, y: 310,
       children: <BlurayViewer />,
     },
     {
       key: 'bts',
       title: <BtsVideoTitle />,
+      mobileTitle: 'BTS VIDEO',
       width: 300, x: 20, y: 40, anchor: 'right' as const,
       children: <BtsVideo />,
     },
     {
       key: 'rig',
       title: <CameraRigTitle />,
+      mobileTitle: 'CAMERA RIG',
       width: 260, x: 20, y: 300, anchor: 'right' as const,
       children: <CameraRig />,
     },

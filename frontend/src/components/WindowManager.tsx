@@ -1,10 +1,11 @@
-import { useSignal, useComputed } from '@preact/signals';
+import { useSignal } from '@preact/signals';
 import type { ComponentChildren } from 'preact';
 import { isMobile } from '../hooks';
 
 interface WindowDef {
   key: string;
   title: ComponentChildren;
+  mobileTitle?: ComponentChildren;
   width?: number;
   x?: number;
   y?: number;
@@ -15,7 +16,8 @@ interface WindowDef {
 
 const TOP_BAR_HEIGHT = 28;
 const MARQUEE_HEIGHT = 24;
-const TITLE_BAR_HEIGHT = 29;
+const GRID_ROW_HEIGHT = 29;
+const GRID_ROWS = 2;
 
 import { FloatingWindow } from './FloatingWindow';
 
@@ -23,12 +25,10 @@ export function WindowManager({ windows }: { windows: WindowDef[] }) {
   const openIndex = useSignal<number | null>(null);
   const mobile = isMobile.value;
 
-  const availableHeight = useComputed(() => {
-    if (!mobile) return 0;
-    return window.innerHeight - TOP_BAR_HEIGHT - MARQUEE_HEIGHT - windows.length * TITLE_BAR_HEIGHT;
-  });
-
   if (mobile) {
+    const gridHeight = GRID_ROWS * GRID_ROW_HEIGHT;
+    const maxContentHeight = window.innerHeight - TOP_BAR_HEIGHT - MARQUEE_HEIGHT - gridHeight - 8;
+
     return (
       <div style={{
         position: 'fixed',
@@ -40,19 +40,50 @@ export function WindowManager({ windows }: { windows: WindowDef[] }) {
         display: 'flex',
         flexDirection: 'column',
       }}>
-        {windows.map((w, i) => (
-          <FloatingWindow
-            key={w.key}
-            title={w.title}
-            mobileOpen={openIndex.value === i}
-            onMobileTitleClick={() => {
-              openIndex.value = openIndex.value === i ? null : i;
-            }}
-            mobileMaxHeight={availableHeight.value}
-          >
-            {w.children}
-          </FloatingWindow>
-        ))}
+        {openIndex.value !== null && (
+          <div style={{
+            background: 'rgba(0,0,0,0.85)',
+            borderTop: '1px solid #00FF41',
+            maxHeight: `${maxContentHeight}px`,
+            overflowY: 'auto',
+          }}>
+            {windows[openIndex.value].children}
+          </div>
+        )}
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+        }}>
+          {windows.map((w, i) => {
+            const active = openIndex.value === i;
+            return (
+              <button
+                key={w.key}
+                class="font-led"
+                style={{
+                  height: `${GRID_ROW_HEIGHT}px`,
+                  background: active ? 'rgba(0,255,65,0.1)' : 'rgba(0,0,0,0.85)',
+                  border: `1px solid ${active ? '#00FF41' : '#333'}`,
+                  color: active ? '#00FF41' : '#888',
+                  textShadow: active ? '0 0 8px #00FF41' : 'none',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  padding: '0 8px',
+                  margin: 0,
+                  textAlign: 'center',
+                  userSelect: 'none',
+                  transition: 'background 0.15s, border-color 0.15s, color 0.15s, text-shadow 0.15s',
+                }}
+                onClick={() => {
+                  openIndex.value = openIndex.value === i ? null : i;
+                }}
+              >
+                {w.mobileTitle ?? w.title}
+              </button>
+            );
+          })}
+        </div>
       </div>
     );
   }
