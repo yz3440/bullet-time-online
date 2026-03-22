@@ -461,20 +461,8 @@ function create360Viewer(options: ViewerOptions): HTMLElement {
   return container;
 }
 
-function createProductCorner(position: 'left' | 'right'): HTMLElement {
-  const posClasses = position === 'left'
-    ? 'fixed bottom-0 left-0 z-10 p-8 md:flex flex-col gap-2 w-36 md:w-auto hidden'
-    : 'fixed bottom-0 right-0 z-10 p-8 md:flex flex-col gap-2 w-36 md:w-auto flex';
-
-  const outer = document.createElement('div');
-  outer.className = posClasses;
-
-  const scaleWrap = document.createElement('div');
-  scaleWrap.className = 'mx-auto group';
-
-  const buyLabel = document.createElement('div');
-  buyLabel.className = 'text-center hidden group-hover:block font-led text-[#00FF41] animate-led-text-glow-green';
-  buyLabel.innerHTML = `<span class="px-2 py-1 bg-black mx-auto"><a href="https://www.blu-ray.com/movies/The-Matrix-Blu-ray/75475/" target="_blank">BUY NOW</a></span>`;
+function createProductWindow(): HTMLElement {
+  const win = createFloatingWindow('Source Blu-ray', { width: 180, x: 20, y: 40, anchor: 'right' });
 
   const viewer = create360Viewer({
     baseUrl: './bluray-box/',
@@ -484,12 +472,24 @@ function createProductCorner(position: 'left' | 'right'): HTMLElement {
     autoplay: true,
     reverse: true,
   });
+  viewer.style.width = '100%';
+  viewer.style.height = 'auto';
+  viewer.style.aspectRatio = '1';
 
-  scaleWrap.appendChild(buyLabel);
-  scaleWrap.appendChild(viewer);
-  outer.appendChild(scaleWrap);
+  const buyLabel = document.createElement('a');
+  buyLabel.href = 'https://www.blu-ray.com/movies/The-Matrix-Blu-ray/75475/';
+  buyLabel.target = '_blank';
+  buyLabel.className = 'block text-center font-led text-[#00FF41] text-xs py-1.5';
+  buyLabel.style.borderTop = '1px solid #00FF4140';
+  buyLabel.style.textDecoration = 'none';
+  buyLabel.style.textShadow = '0 0 8px #00FF41, 0 0 20px rgba(0,255,65,0.4)';
+  buyLabel.textContent = 'BUY NOW';
 
-  return outer;
+  win.contentEl.appendChild(viewer);
+  win.contentEl.appendChild(buyLabel);
+  win.setVisible(true);
+
+  return win.element;
 }
 
 // ---- Floating Window ----
@@ -500,11 +500,16 @@ export interface FloatingWindowHandle {
   contentEl: HTMLElement;
 }
 
-function createFloatingWindow(title: string, opts?: { width?: number; x?: number; y?: number }): FloatingWindowHandle {
+function createFloatingWindow(title: string, opts?: { width?: number; x?: number; y?: number; anchor?: 'left' | 'right' }): FloatingWindowHandle {
+  const anchor = opts?.anchor ?? 'left';
   const win = document.createElement('div');
   win.style.position = 'fixed';
   win.style.zIndex = '9998';
-  win.style.left = `${opts?.x ?? 80}px`;
+  if (anchor === 'right') {
+    win.style.right = `${opts?.x ?? 80}px`;
+  } else {
+    win.style.left = `${opts?.x ?? 80}px`;
+  }
   win.style.bottom = `${opts?.y ?? 40}px`;
   win.style.width = `${opts?.width ?? 400}px`;
   win.style.background = 'rgba(0,0,0,0.85)';
@@ -549,6 +554,7 @@ function createFloatingWindow(title: string, opts?: { width?: number; x?: number
   win.appendChild(content);
 
   let minimized = false;
+  minimizeBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
   minimizeBtn.addEventListener('click', () => {
     minimized = !minimized;
     content.style.display = minimized ? 'none' : '';
@@ -567,11 +573,13 @@ function createFloatingWindow(title: string, opts?: { width?: number; x?: number
     const rect = win.getBoundingClientRect();
     dragOffsetX = e.clientX - rect.left;
     dragOffsetY = e.clientY - rect.top;
-    // Switch from bottom-anchored to top-anchored on first drag
-    if (win.style.bottom) {
+    // Switch to top/left absolute positioning on first drag
+    if (win.style.bottom || win.style.right) {
       const r = win.getBoundingClientRect();
       win.style.top = `${r.top}px`;
+      win.style.left = `${r.left}px`;
       win.style.bottom = '';
+      win.style.right = '';
     }
   });
 
@@ -638,8 +646,7 @@ export function initOverlay(config: TopBarConfig): TopBarHandle & { frameViewer:
 
   const { element, handle } = createTopBar(config);
   root.appendChild(element);
-  root.appendChild(createProductCorner('left'));
-  root.appendChild(createProductCorner('right'));
+  root.appendChild(createProductWindow());
   root.appendChild(createMarquee());
 
   const frameViewer = createFrameViewer();
