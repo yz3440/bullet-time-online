@@ -47,3 +47,7 @@ reconstruction-data/splats/bullet-time-neo.ply   (optional, skipped if absent)
 ```
 
 Both derived outputs are committed so the frontend works without re-running the script.
+
+## Disclaimer
+
+The Matrix is a trademark of Warner Bros. Entertainment Inc. The ~10 seconds of source frames used for 3D reconstruction are from a personally owned Blu-ray copy. This is a non-commercial technical project and is not affiliated with or endorsed by Warner Bros.
