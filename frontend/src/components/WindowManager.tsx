@@ -22,7 +22,7 @@ const GRID_ROWS = 2;
 import { FloatingWindow } from './FloatingWindow';
 
 export function WindowManager({ windows }: { windows: WindowDef[] }) {
-  const openIndex = useSignal<number | null>(null);
+  const openIndex = useSignal<number | null>(isMobile.value ? 0 : null);
   const mobile = isMobile.value;
 
   if (mobile) {
