@@ -143,6 +143,7 @@ const frustumColor = new pc.Color(0, 1, 0.255, 0.6);
 // ---- PlayCanvas Application ----
 
 const canvas = document.createElement('canvas');
+canvas.style.touchAction = 'none';
 document.getElementById('root')!.appendChild(canvas);
 
 const app = new pc.Application(canvas, {

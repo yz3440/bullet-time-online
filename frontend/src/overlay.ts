@@ -2,7 +2,47 @@
  * Overlay UI: top bar controls + marquee ticker + 360 product viewer (no React).
  */
 
-import { createElement, RotateCcw, Play, Pause } from 'lucide';
+// ---- Sharp Icons ----
+
+function sharpIcon(name: 'play' | 'pause' | 'reset', color: string, size: number): SVGElement {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', String(size));
+  svg.setAttribute('height', String(size));
+  svg.setAttribute('viewBox', '0 0 18 18');
+  svg.setAttribute('fill', 'none');
+  svg.style.display = 'block';
+
+  if (name === 'play') {
+    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    poly.setAttribute('points', '5,3 5,15 15,9');
+    poly.setAttribute('fill', color);
+    svg.appendChild(poly);
+  } else if (name === 'pause') {
+    for (const x of [4, 11]) {
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', String(x));
+      rect.setAttribute('y', '3');
+      rect.setAttribute('width', '3');
+      rect.setAttribute('height', '12');
+      rect.setAttribute('fill', color);
+      svg.appendChild(rect);
+    }
+  } else if (name === 'reset') {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M4 9 L4 4 L14 4 L14 14 L7 14');
+    path.setAttribute('stroke', color);
+    path.setAttribute('stroke-width', '1.8');
+    path.setAttribute('stroke-linecap', 'square');
+    path.setAttribute('stroke-linejoin', 'miter');
+    svg.appendChild(path);
+    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    arrow.setAttribute('points', '4,6 4,12 7,9');
+    arrow.setAttribute('fill', color);
+    svg.appendChild(arrow);
+  }
+
+  return svg;
+}
 
 // ---- Top Bar Config ----
 
@@ -49,6 +89,7 @@ function createCustomSlider(
 
   const container = document.createElement('div');
   container.className = 'flex-1 flex flex-col cursor-pointer select-none';
+  container.style.touchAction = 'none';
   container.tabIndex = 0;
   container.setAttribute('role', 'slider');
   container.setAttribute('aria-valuemin', '0');
@@ -84,12 +125,12 @@ function createCustomSlider(
   trackRow.style.height = '12px';
 
   const track = document.createElement('div');
-  track.className = 'absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[3px] rounded-sm';
+  track.className = 'absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[3px]';
   track.style.background = '#333';
   trackRow.appendChild(track);
 
   const fill = document.createElement('div');
-  fill.className = 'absolute left-0 top-1/2 -translate-y-1/2 h-[3px] rounded-sm';
+  fill.className = 'absolute left-0 top-1/2 -translate-y-1/2 h-[3px]';
   fill.style.background = 'rgba(136,136,136,0.3)';
   trackRow.appendChild(fill);
 
@@ -191,16 +232,12 @@ function createCustomSlider(
 
   const playBtn = document.createElement('button');
   playBtn.className =
-    'w-7 h-7 flex items-center justify-center rounded transition-colors ' +
+    'w-7 h-7 flex items-center justify-center transition-colors shrink-0 ' +
     'hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-[#00FF41]/60 focus:outline-none';
 
   function renderPlayBtn() {
     playBtn.innerHTML = '';
-    playBtn.appendChild(createElement(playing ? Pause : Play, {
-      size: 14,
-      color: '#00FF41',
-      'stroke-width': 1.5,
-    }));
+    playBtn.appendChild(sharpIcon(playing ? 'pause' : 'play', '#00FF41', 14));
   }
   renderPlayBtn();
 
@@ -260,7 +297,7 @@ function createBistableSwitch(
   let active = initial;
 
   const outer = document.createElement('div');
-  outer.className = 'flex items-center gap-1.5 cursor-pointer select-none';
+  outer.className = 'flex items-center gap-1.5 cursor-pointer select-none shrink-0';
 
   const labelOff = document.createElement('span');
   labelOff.className = 'font-led text-[10px] leading-none';
@@ -330,7 +367,7 @@ function createBistableSwitch(
 function createTopBar(config: TopBarConfig): { element: HTMLElement; handle: TopBarHandle } {
   const bar = document.createElement('div');
   bar.className =
-    'fixed top-0 left-0 right-0 flex items-center gap-3 px-4 py-px ' +
+    'fixed top-0 left-0 right-0 flex items-center gap-1 px-1 py-px overflow-hidden ' +
     'bg-black/70 backdrop-blur-sm';
   bar.style.zIndex = '9999';
   bar.style.pointerEvents = 'auto';
@@ -349,21 +386,12 @@ function createTopBar(config: TopBarConfig): { element: HTMLElement; handle: Top
   });
 
   const label = document.createElement('span');
-  label.className = 'font-led text-[#00FF41] text-sm tabular-nums whitespace-nowrap min-w-[5ch] text-right';
+  label.className = 'font-led text-[#00FF41] text-xs tabular-nums whitespace-nowrap shrink-0';
   function updateLabel(index: number) {
     label.textContent = `${index + 1}/${config.cameraCount}`;
   }
   updateLabel(config.initialCameraIndex);
 
-  const resetBtn = document.createElement('button');
-  resetBtn.className =
-    'w-9 h-9 flex items-center justify-center rounded transition-colors ' +
-    'hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-[#00FF41]/60 focus:outline-none';
-  resetBtn.title = 'Reset Camera';
-  resetBtn.appendChild(createElement(RotateCcw, { size: 18, color: '#00FF41', 'stroke-width': 1.5 }));
-  resetBtn.addEventListener('click', config.onResetCamera);
-
-  bar.appendChild(resetBtn);
   bar.appendChild(slider.playBtn);
   bar.appendChild(slider.element);
   bar.appendChild(label);
@@ -594,6 +622,7 @@ function createFloatingWindow(title: string, opts?: { width?: number; x?: number
   titleBar.style.cursor = 'grab';
   titleBar.style.borderBottom = '1px solid #00FF4140';
   titleBar.style.userSelect = 'none';
+  titleBar.style.touchAction = 'none';
 
   const titleText = document.createElement('span');
   titleText.className = 'font-led';
@@ -706,7 +735,7 @@ function createFrameViewer(
   video.style.display = 'block';
 
   const sliderWrap = document.createElement('div');
-  sliderWrap.style.padding = '4px 8px 6px';
+  sliderWrap.style.padding = '0 8px 0 0';
   sliderWrap.style.display = 'flex';
   sliderWrap.style.alignItems = 'center';
   sliderWrap.style.gap = '4px';

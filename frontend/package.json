@@ -9,7 +9,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "lucide": "^0.577.0",
     "playcanvas": "^2.17.2"
   },
   "devDependencies": {
