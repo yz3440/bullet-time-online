@@ -1,6 +1,7 @@
 import { useSignal } from '@preact/signals';
 import type { ComponentChildren } from 'preact';
 import { isMobile } from '../hooks';
+import { neoOnly } from '../state';
 
 interface WindowDef {
   key: string;
@@ -30,51 +31,64 @@ export function WindowManager({ windows }: { windows: WindowDef[] }) {
     const fixedChrome = TOP_BAR_HEIGHT + MARQUEE_HEIGHT + gridHeight + 8;
     const maxContentHeight = `calc(100vh - ${fixedChrome}px - env(safe-area-inset-top) - env(safe-area-inset-bottom))`;
 
+    const neo = neoOnly.value;
+    const accent = neo ? '#00FF41' : '#00FF41';
+    const textColor = neo ? '#000000' : '#00FF41';
+    const accentDim = neo ? 'rgba(255,255,255,0.85)' : 'rgba(0,255,65,0.1)';
+    const accentGlow = neo ? 'none' : '0 0 8px #00FF41';
+
     return (
-      <div style={{
-        position: 'fixed',
-        bottom: `calc(${MARQUEE_HEIGHT}px + env(safe-area-inset-bottom))`,
-        left: 0,
-        right: 0,
-        zIndex: 9998,
-        pointerEvents: 'auto',
-        display: 'flex',
-        flexDirection: 'column',
-      }}>
+      <div
+        style={{
+          position: 'fixed',
+          bottom: `calc(${MARQUEE_HEIGHT}px + env(safe-area-inset-bottom))`,
+          left: 0,
+          right: 0,
+          zIndex: 9998,
+          pointerEvents: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         {openIndex.value !== null && (
-          <div style={{
-            background: 'rgba(0,0,0,0.85)',
-            borderTop: '1px solid #00FF41',
-            maxHeight: maxContentHeight,
-            overflowY: 'auto',
-          }}>
+          <div
+            style={{
+              background: 'rgba(0,0,0,0.85)',
+              borderTop: `1px solid ${accent}`,
+              maxHeight: maxContentHeight,
+              overflowY: 'auto',
+            }}
+          >
             {windows[openIndex.value].children}
           </div>
         )}
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-        }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+          }}
+        >
           {windows.map((w, i) => {
             const active = openIndex.value === i;
             return (
               <button
                 key={w.key}
-                class="font-led"
+                class='font-led'
                 style={{
                   height: `${GRID_ROW_HEIGHT}px`,
-                  background: active ? 'rgba(0,255,65,0.1)' : 'rgba(0,0,0,0.85)',
-                  border: `1px solid ${active ? '#00FF41' : '#333'}`,
-                  color: active ? '#00FF41' : '#888',
-                  textShadow: active ? '0 0 8px #00FF41' : 'none',
+                  background: active ? accentDim : 'rgba(0,0,0,0.85)',
+                  border: `1px solid ${active ? accent : '#333'}`,
+                  color: active ? textColor : '#888',
+                  textShadow: active ? accentGlow : 'none',
                   fontSize: '11px',
                   cursor: 'pointer',
                   padding: '0 8px',
                   margin: 0,
                   textAlign: 'center',
                   userSelect: 'none',
-                  transition: 'background 0.15s, border-color 0.15s, color 0.15s, text-shadow 0.15s',
+                  transition:
+                    'background 0.15s, border-color 0.15s, color 0.15s, text-shadow 0.15s',
                 }}
                 onClick={() => {
                   openIndex.value = openIndex.value === i ? null : i;

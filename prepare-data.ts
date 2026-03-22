@@ -20,8 +20,10 @@ const rootDir = import.meta.dirname;
 
 const colmapDir = path.join(rootDir, 'reconstruction-data/colmap');
 const plyPath = path.join(rootDir, 'reconstruction-data/splats/bullet-time.ply');
+const neoPlyPath = path.join(rootDir, 'reconstruction-data/splats/bullet-time-neo.ply');
 const jsonOut = path.join(rootDir, 'frontend/src/data/postshot-colmap.json');
 const sogOut = path.join(rootDir, 'frontend/public/splats/bullet-time.sog');
+const neoSogOut = path.join(rootDir, 'frontend/public/splats/bullet-time-neo.sog');
 
 // ---- Helpers ----
 
@@ -139,4 +141,20 @@ if (mtime(plyPath) > mtime(sogOut)) {
   console.log(`→ ${path.relative(rootDir, sogOut)}`);
 } else {
   console.log('bullet-time.sog is up to date');
+}
+
+if (existsSync(neoPlyPath)) {
+  if (mtime(neoPlyPath) > mtime(neoSogOut)) {
+    mkdirSync(path.dirname(neoSogOut), { recursive: true });
+    console.log('Converting Neo PLY → SOG ...');
+    execSync(
+      `npx splat-transform -w -g 0 -i 3 "${neoPlyPath}" "${neoSogOut}"`,
+      { stdio: 'inherit', cwd: path.join(rootDir, 'frontend') },
+    );
+    console.log(`→ ${path.relative(rootDir, neoSogOut)}`);
+  } else {
+    console.log('bullet-time-neo.sog is up to date');
+  }
+} else {
+  console.log('bullet-time-neo.ply not found, skipping neo splat');
 }

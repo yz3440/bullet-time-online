@@ -3,8 +3,10 @@ import {
   cameraCount,
   followCamera,
   isPlaying,
+  neoOnly,
   callbacks,
 } from '../state';
+import { isMobile } from '../hooks';
 import { Slider } from './Slider';
 
 function BistableSwitch() {
@@ -57,30 +59,101 @@ function BistableSwitch() {
   );
 }
 
-export function TopBar() {
-  const count = cameraCount.value;
+function NeoSwitch() {
+  const active = neoOnly.value;
 
   return (
     <div
-      class='fixed top-0 left-0 right-0 flex items-center gap-3 px-1 py-px overflow-hidden bg-black/70 backdrop-blur-sm'
-      style={{ zIndex: 9999, pointerEvents: 'auto', paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}
+      class='flex items-center gap-1.5 cursor-pointer select-none shrink-0 mr-2'
+      onClick={() => {
+        neoOnly.value = !neoOnly.value;
+        callbacks.onNeoOnlyChange(neoOnly.value);
+      }}
     >
-      <Slider
-        count={count}
-        value={cameraIndex}
-        active={followCamera}
-        playing={isPlaying}
-        onChange={(idx) => {
-          callbacks.onCameraIndexChange(idx);
-        }}
-        onPlayChange={(p) => {
-          isPlaying.value = p;
-        }}
-      />
-      <span class='font-led text-[#00FF41] text-xs tabular-nums whitespace-nowrap shrink-0'>
-        <span style={{ display: 'inline-block', width: '3ch', textAlign: 'right' }}>{cameraIndex.value + 1}</span>/{count}
+      <span
+        class='font-led text-[10px] leading-none'
+        style={{ color: active ? '#555' : '#888' }}
+      >
+        SCENE
       </span>
-      <BistableSwitch />
+      <div
+        style={{
+          width: '28px',
+          height: '14px',
+          position: 'relative',
+          border: `1px solid ${active ? '#00FF41' : '#555'}`,
+          background: active ? 'rgba(0,255,65,0.1)' : 'transparent',
+          transition: 'border-color 0.15s, background 0.15s',
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            top: '1px',
+            width: '12px',
+            height: '10px',
+            left: active ? '13px' : '1px',
+            background: active ? '#00FF41' : '#666',
+            boxShadow: active ? '0 0 6px #00ff4180' : 'none',
+            transition: 'left 0.15s, background 0.15s, box-shadow 0.15s',
+          }}
+        />
+      </div>
+      <span
+        class='font-led text-[10px] leading-none'
+        style={{ color: active ? '#00FF41' : '#555' }}
+      >
+        NEO
+      </span>
+    </div>
+  );
+}
+
+export function TopBar() {
+  const count = cameraCount.value;
+  const mobile = isMobile.value;
+
+  return (
+    <div
+      class='fixed top-0 left-0 right-0 bg-black/70 backdrop-blur-sm'
+      style={{
+        zIndex: 9999,
+        pointerEvents: 'auto',
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
+      }}
+    >
+      <div class={`flex items-center gap-3 pl-1 ${mobile ? 'pr-1' : 'pr-3'} py-px`}>
+        <Slider
+          count={count}
+          value={cameraIndex}
+          active={followCamera}
+          playing={isPlaying}
+          onChange={(idx) => {
+            callbacks.onCameraIndexChange(idx);
+          }}
+          onPlayChange={(p) => {
+            isPlaying.value = p;
+          }}
+        />
+        <span class='font-led text-[#00FF41] text-xs tabular-nums whitespace-nowrap shrink-0'>
+          <span
+            style={{ display: 'inline-block', width: '3ch', textAlign: 'right' }}
+          >
+            {cameraIndex.value + 1}
+          </span>
+          /{count}
+        </span>
+        {!mobile && <BistableSwitch />}
+        {!mobile && <NeoSwitch />}
+      </div>
+      {mobile && (
+        <div class='flex items-center justify-between px-3 py-1'>
+          <BistableSwitch />
+          <NeoSwitch />
+        </div>
+      )}
     </div>
   );
 }
