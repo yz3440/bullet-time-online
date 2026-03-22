@@ -9,7 +9,9 @@ original-frames/          Raw frames extracted from the Blu-ray
 bluray-images/            Image processing pipeline (crop, resize, center)
 reconstruction-data/
   colmap/                 COLMAP sparse reconstruction output (cameras, images, points)
-  splats/                 Source Gaussian splat (.ply, 23 MB)
+  splats/                 Source Gaussian splats (.ply)
+                            bullet-time.ply       Full scene
+                            bullet-time-neo.ply   Neo only (extracted subject)
 prepare-data.ts           One-time script to regenerate derived data
 frontend/                 Web viewer — see frontend/README.md
 ```
@@ -31,7 +33,7 @@ Converts reconstruction data into web-ready formats. Run once after changing sou
 bun prepare-data.ts
 ```
 
-This parses COLMAP binaries into camera JSON and converts the raw PLY splat to PlayCanvas SOG format. Only regenerates files when sources are newer than outputs.
+This parses COLMAP binaries into camera JSON and converts PLY splats to PlayCanvas SOG format. Only regenerates files when sources are newer than outputs.
 
 ```
 reconstruction-data/colmap/{cameras,images}.bin
@@ -39,6 +41,9 @@ reconstruction-data/colmap/{cameras,images}.bin
 
 reconstruction-data/splats/bullet-time.ply
   → frontend/public/splats/bullet-time.sog   (~3 MB, SOG format)
+
+reconstruction-data/splats/bullet-time-neo.ply   (optional, skipped if absent)
+  → frontend/public/splats/bullet-time-neo.sog
 ```
 
 Both derived outputs are committed so the frontend works without re-running the script.
