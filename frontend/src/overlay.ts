@@ -2,7 +2,7 @@
  * Overlay UI: top bar controls + marquee ticker + 360 product viewer (no React).
  */
 
-import { createElement, RotateCcw } from 'lucide';
+import { createElement, RotateCcw, Play, Pause } from 'lucide';
 
 // ---- Top Bar Config ----
 
@@ -13,25 +13,32 @@ export interface TopBarConfig {
   onCameraIndexChange: (index: number) => void;
   onFollowCameraChange: (follow: boolean) => void;
   onResetCamera: () => void;
+  onFlyToRig: () => void;
+  onPlayStateChange?: (playing: boolean) => void;
 }
 
 export interface TopBarHandle {
   setCameraIndex: (index: number) => void;
   setFollowCamera: (active: boolean) => void;
+  setPlaying: (state: boolean) => void;
 }
 
 // ---- Custom Slider ----
 
 interface SliderHandle {
   element: HTMLElement;
+  playBtn: HTMLButtonElement;
   setValue: (index: number) => void;
   setActive: (active: boolean) => void;
+  stop: () => void;
+  setPlaying: (state: boolean) => void;
 }
 
 function createCustomSlider(
   count: number,
   initial: number,
   onChange: (index: number) => void,
+  onPlayChange?: (playing: boolean) => void,
 ): SliderHandle {
   const maxIdx = count - 1;
   let current = initial;
@@ -142,6 +149,7 @@ function createCustomSlider(
 
   container.addEventListener('pointerdown', (e) => {
     dragging = true;
+    if (playing) stopPlayback();
     container.setPointerCapture(e.pointerId);
     const idx = indexFromPointer(e.clientX);
     update(idx);
@@ -177,14 +185,63 @@ function createCustomSlider(
 
   update(initial);
 
+  // Play/pause
+  let playing = false;
+  let playInterval: ReturnType<typeof setInterval> | null = null;
+
+  const playBtn = document.createElement('button');
+  playBtn.className =
+    'w-7 h-7 flex items-center justify-center rounded transition-colors ' +
+    'hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-[#00FF41]/60 focus:outline-none';
+
+  function renderPlayBtn() {
+    playBtn.innerHTML = '';
+    playBtn.appendChild(createElement(playing ? Pause : Play, {
+      size: 14,
+      color: '#00FF41',
+      'stroke-width': 1.5,
+    }));
+  }
+  renderPlayBtn();
+
+  function stopPlayback() {
+    if (playInterval) { clearInterval(playInterval); playInterval = null; }
+    playing = false;
+    renderPlayBtn();
+  }
+
+  function startPlayback() {
+    stopPlayback();
+    playing = true;
+    renderPlayBtn();
+    playInterval = setInterval(() => {
+      const next = current + 1;
+      if (next > maxIdx) { stopPlayback(); onPlayChange?.(false); return; }
+      update(next);
+      onChange(next);
+    }, 1000 / 24);
+  }
+
+  playBtn.addEventListener('click', () => {
+    if (playing) stopPlayback(); else startPlayback();
+    onPlayChange?.(playing);
+  });
+
   return {
     element: container,
+    playBtn,
     setValue(index: number) {
       update(index);
     },
     setActive(active: boolean) {
       isActive = active;
       applyColors();
+    },
+    stop() {
+      stopPlayback();
+    },
+    setPlaying(state: boolean) {
+      if (state) startPlayback(); else stopPlayback();
     },
   };
 }
@@ -287,6 +344,8 @@ function createTopBar(config: TopBarConfig): { element: HTMLElement; handle: Top
   const slider = createCustomSlider(config.cameraCount, config.initialCameraIndex, (idx) => {
     updateLabel(idx);
     config.onCameraIndexChange(idx);
+  }, (playing) => {
+    config.onPlayStateChange?.(playing);
   });
 
   const label = document.createElement('span');
@@ -305,6 +364,7 @@ function createTopBar(config: TopBarConfig): { element: HTMLElement; handle: Top
   resetBtn.addEventListener('click', config.onResetCamera);
 
   bar.appendChild(resetBtn);
+  bar.appendChild(slider.playBtn);
   bar.appendChild(slider.element);
   bar.appendChild(label);
   bar.appendChild(followToggle.element);
@@ -317,6 +377,9 @@ function createTopBar(config: TopBarConfig): { element: HTMLElement; handle: Top
     setFollowCamera(active: boolean) {
       followToggle.setState(active);
       slider.setActive(active);
+    },
+    setPlaying(state: boolean) {
+      slider.setPlaying(state);
     },
   };
 
@@ -485,6 +548,11 @@ function createProductWindow(): HTMLElement {
   buyLabel.style.textShadow = '0 0 8px #00FF41, 0 0 20px rgba(0,255,65,0.4)';
   buyLabel.textContent = 'BUY NOW';
 
+  const ownedLabel = document.createElement('div');
+  ownedLabel.className = 'text-center font-led text-[10px] py-1 text-[#aaa]';
+  ownedLabel.textContent = '(yes i bought it)';
+
+  win.contentEl.appendChild(ownedLabel);
   win.contentEl.appendChild(viewer);
   win.contentEl.appendChild(buyLabel);
   win.setVisible(true);
@@ -555,6 +623,9 @@ function createFloatingWindow(title: string, opts?: { width?: number; x?: number
 
   let minimized = false;
   minimizeBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+  titleText.addEventListener('pointerdown', (e) => {
+    if ((e.target as HTMLElement).tagName === 'A') e.stopPropagation();
+  });
   minimizeBtn.addEventListener('click', () => {
     minimized = !minimized;
     content.style.display = minimized ? 'none' : '';
@@ -609,14 +680,22 @@ function createFloatingWindow(title: string, opts?: { width?: number; x?: number
 
 export interface FrameViewerHandle {
   element: HTMLElement;
-  setVisible: (visible: boolean) => void;
   setFrameIndex: (index: number) => void;
+  setActive: (active: boolean) => void;
+  setPlaying: (state: boolean) => void;
 }
 
 const FRAME_FPS = 24;
 
-function createFrameViewer(): FrameViewerHandle {
-  const win = createFloatingWindow('ORIGINAL FRAME', { width: 480, x: 80, y: 40 });
+function createFrameViewer(
+  count: number,
+  initial: number,
+  onSliderChange: (index: number) => void,
+  onPlayChange?: (playing: boolean) => void,
+): FrameViewerHandle {
+  const win = createFloatingWindow('', { width: 480, x: 80, y: 40 });
+  const titleSpan = win.element.querySelector('.font-led') as HTMLElement;
+  titleSpan.innerHTML = `ORIGINAL FRAME <span style="color:#aaa;font-size:10px">(ripped from the Blu-ray)</span>`;
 
   const video = document.createElement('video');
   video.src = '/original-frames.mp4';
@@ -626,17 +705,109 @@ function createFrameViewer(): FrameViewerHandle {
   video.style.width = '100%';
   video.style.display = 'block';
 
+  const sliderWrap = document.createElement('div');
+  sliderWrap.style.padding = '4px 8px 6px';
+  sliderWrap.style.display = 'flex';
+  sliderWrap.style.alignItems = 'center';
+  sliderWrap.style.gap = '4px';
+
+  const slider = createCustomSlider(count, initial, (idx) => {
+    video.currentTime = idx / FRAME_FPS;
+    onSliderChange(idx);
+  }, onPlayChange);
+
+  sliderWrap.appendChild(slider.playBtn);
+  sliderWrap.appendChild(slider.element);
+
   win.contentEl.appendChild(video);
+  win.contentEl.appendChild(sliderWrap);
+  win.setVisible(true);
 
   return {
     element: win.element,
-    setVisible(visible: boolean) {
-      win.setVisible(visible);
-    },
     setFrameIndex(index: number) {
       video.currentTime = index / FRAME_FPS;
+      slider.setValue(index);
+    },
+    setActive(active: boolean) {
+      slider.setActive(active);
+    },
+    setPlaying(state: boolean) {
+      slider.setPlaying(state);
     },
   };
+}
+
+// ---- BTS Video Window ----
+
+function createBtsVideoWindow(): HTMLElement {
+  const win = createFloatingWindow('', { width: 300, x: 580, y: 40 });
+  const titleSpan = win.element.querySelector('.font-led') as HTMLElement;
+  titleSpan.innerHTML =
+    'BTS VIDEO ' +
+    '<a href="https://www.newworlddesigns.co.uk/creating-the-matrix-bullet-time-effect/" target="_blank" style="color:#aaa;font-size:10px;text-decoration:none" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">(Source)</a>';
+
+  const videoWrap = document.createElement('div');
+  videoWrap.style.position = 'relative';
+  videoWrap.style.width = '100%';
+  videoWrap.style.paddingBottom = '75%'; // 4:3
+
+  const iframe = document.createElement('iframe');
+  iframe.src = 'https://player.vimeo.com/video/564167222?h=c0583d44ec&dnt=1&app_id=122963';
+  iframe.title = 'Bullet Time and The Matrix.mp4';
+  iframe.setAttribute('credentialless', '');
+  iframe.style.position = 'absolute';
+  iframe.style.top = '0';
+  iframe.style.left = '0';
+  iframe.style.width = '100%';
+  iframe.style.height = '100%';
+  iframe.style.border = 'none';
+  iframe.allow = 'autoplay; fullscreen; picture-in-picture';
+
+  videoWrap.appendChild(iframe);
+
+  win.contentEl.appendChild(videoWrap);
+  win.setVisible(true);
+
+  return win.element;
+}
+
+// ---- Camera Rig Window ----
+
+function createRigWindow(onFlyToRig: () => void): HTMLElement {
+  const win = createFloatingWindow('', { width: 260, x: 580, y: 320 });
+  const titleSpan = win.element.querySelector('.font-led') as HTMLElement;
+  titleSpan.innerHTML =
+    'CAMERA RIG ' +
+    '<a href="https://beforesandafters.com/2021/07/15/vfx-artifacts-the-bullet-time-rig-from-the-matrix/" target="_blank" style="color:#aaa;font-size:10px;text-decoration:none" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">(Source)</a>';
+
+  const rigImg = document.createElement('img');
+  rigImg.src = '/Bulletime.webp';
+  rigImg.style.width = '100%';
+  rigImg.style.display = 'block';
+
+  const flyBtn = document.createElement('button');
+  flyBtn.className = 'font-led';
+  flyBtn.textContent = 'FLY TO RIG';
+  flyBtn.style.display = 'block';
+  flyBtn.style.width = '100%';
+  flyBtn.style.padding = '6px';
+  flyBtn.style.background = 'none';
+  flyBtn.style.border = '1px solid #00FF41';
+  flyBtn.style.color = '#00FF41';
+  flyBtn.style.fontSize = '11px';
+  flyBtn.style.cursor = 'pointer';
+  flyBtn.style.textShadow = '0 0 8px #00FF41';
+  flyBtn.style.transition = 'background 0.15s';
+  flyBtn.addEventListener('mouseenter', () => { flyBtn.style.background = 'rgba(0,255,65,0.1)'; });
+  flyBtn.addEventListener('mouseleave', () => { flyBtn.style.background = 'none'; });
+  flyBtn.addEventListener('click', onFlyToRig);
+
+  win.contentEl.appendChild(rigImg);
+  win.contentEl.appendChild(flyBtn);
+  win.setVisible(true);
+
+  return win.element;
 }
 
 // ---- Init ----
@@ -644,13 +815,29 @@ function createFrameViewer(): FrameViewerHandle {
 export function initOverlay(config: TopBarConfig): TopBarHandle & { frameViewer: FrameViewerHandle } {
   const root = document.getElementById('root')!;
 
+  // Late-bound ref so the top bar play button can sync the frame viewer
+  let frameViewerRef: FrameViewerHandle | null = null;
+  const origOnPlay = config.onPlayStateChange;
+  config.onPlayStateChange = (playing) => {
+    frameViewerRef?.setPlaying(playing);
+    origOnPlay?.(playing);
+  };
+
   const { element, handle } = createTopBar(config);
   root.appendChild(element);
   root.appendChild(createProductWindow());
   root.appendChild(createMarquee());
 
-  const frameViewer = createFrameViewer();
+  const frameViewer = createFrameViewer(config.cameraCount, config.initialCameraIndex, (idx) => {
+    handle.setCameraIndex(idx);
+    config.onCameraIndexChange(idx);
+  }, (playing) => {
+    handle.setPlaying(playing);
+  });
+  frameViewerRef = frameViewer;
   root.appendChild(frameViewer.element);
+  root.appendChild(createBtsVideoWindow());
+  root.appendChild(createRigWindow(config.onFlyToRig));
 
   return { ...handle, frameViewer };
 }

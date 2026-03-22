@@ -220,6 +220,8 @@ const params = {
 
 const transition = {
   active: false,
+  releaseOnComplete: false,
+  focusOnComplete: null as pc.Vec3 | null,
   targetPos: new pc.Vec3(),
   targetQuat: new pc.Quat(),
   targetFov: 60,
@@ -234,6 +236,27 @@ function startTransition() {
   transition.targetQuat.copy(cam.quaternion);
   transition.targetFov = cam.fov;
   transition.active = true;
+  transition.releaseOnComplete = false;
+  transition.focusOnComplete = null;
+  transition.progress = 0;
+
+  if (cameraControls) {
+    cameraControls.enableOrbit = false;
+    cameraControls.enableFly = false;
+    cameraControls.enablePan = false;
+  }
+}
+
+function flyToOrbit(pos: pc.Vec3, focus: pc.Vec3, fov: number) {
+  transition.targetPos.copy(pos);
+  // Compute look-at quaternion from pos toward focus
+  const tmpMat = new pc.Mat4();
+  tmpMat.setLookAt(pos, focus, pc.Vec3.UP);
+  transition.targetQuat.setFromMat4(tmpMat);
+  transition.targetFov = fov;
+  transition.active = true;
+  transition.releaseOnComplete = true;
+  transition.focusOnComplete = focus.clone();
   transition.progress = 0;
 
   if (cameraControls) {
@@ -251,6 +274,10 @@ function releaseCamera() {
     cameraControls.enablePan = true;
   }
 }
+
+const rigCameraPos = new pc.Vec3(-14.193, 3.840, -8.025);
+const rigCameraFocusPoint = new pc.Vec3(-4.349, -0.780, -3.866);
+const rigCameraFov = 60;
 
 // ---- Render loop ----
 
@@ -290,6 +317,12 @@ app.on('update', (dt: number) => {
 
     if (transition.progress >= 1) {
       transition.active = false;
+      if (transition.releaseOnComplete) {
+        if (transition.focusOnComplete && cameraControls) {
+          cameraControls.focusPoint = transition.focusOnComplete.clone();
+        }
+        releaseCamera();
+      }
     }
   } else if (params.followCamera) {
     const cam = cameras[params.cameraIndex];
@@ -310,7 +343,7 @@ const overlayHandle = initOverlay({
     if (!params.followCamera) {
       params.followCamera = true;
       overlayHandle.setFollowCamera(true);
-      overlayHandle.frameViewer.setVisible(true);
+      overlayHandle.frameViewer.setActive(true);
       startTransition();
     } else {
       transition.active = false;
@@ -319,7 +352,7 @@ const overlayHandle = initOverlay({
   },
   onFollowCameraChange(follow) {
     params.followCamera = follow;
-    overlayHandle.frameViewer.setVisible(follow);
+    overlayHandle.frameViewer.setActive(follow);
     if (follow) {
       startTransition();
       overlayHandle.frameViewer.setFrameIndex(params.cameraIndex);
@@ -331,10 +364,16 @@ const overlayHandle = initOverlay({
     params.followCamera = false;
     transition.active = false;
     releaseCamera();
-    overlayHandle.frameViewer.setVisible(false);
+    overlayHandle.frameViewer.setActive(false);
     if (cameraControls) {
       cameraControls.reset(defaultFocusPoint, defaultCameraPos);
     }
+  },
+  onFlyToRig() {
+    params.followCamera = false;
+    overlayHandle.setFollowCamera(false);
+    overlayHandle.frameViewer.setActive(false);
+    flyToOrbit(rigCameraPos, rigCameraFocusPoint, rigCameraFov);
   },
 });
 
@@ -344,7 +383,7 @@ canvas.addEventListener('pointerdown', () => {
     params.followCamera = false;
     releaseCamera();
     overlayHandle.setFollowCamera(false);
-    overlayHandle.frameViewer.setVisible(false);
+    overlayHandle.frameViewer.setActive(false);
   }
 });
 
