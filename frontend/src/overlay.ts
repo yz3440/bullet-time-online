@@ -5,7 +5,7 @@
 
 import { render, h } from 'preact';
 import { Overlay } from './components/Overlay';
-import { cameraIndex, cameraCount, followCamera, isPlaying, callbacks } from './state';
+import { cameraIndex, cameraCount, followCamera, isPlaying, neoOnly, callbacks } from './state';
 
 export interface TopBarConfig {
   cameraCount: number;
@@ -15,6 +15,7 @@ export interface TopBarConfig {
   onFollowCameraChange: (follow: boolean) => void;
   onResetCamera: () => void;
   onFlyToRig: () => void;
+  onNeoOnlyChange: (neo: boolean) => void;
   onPlayStateChange?: (playing: boolean) => void;
 }
 
@@ -22,6 +23,7 @@ export interface TopBarHandle {
   setCameraIndex: (index: number) => void;
   setFollowCamera: (active: boolean) => void;
   setPlaying: (state: boolean) => void;
+  setNeoOnly: (neo: boolean) => void;
 }
 
 export interface FrameViewerHandle {
@@ -38,6 +40,7 @@ export function initOverlay(config: TopBarConfig): TopBarHandle & { frameViewer:
   callbacks.onCameraIndexChange = config.onCameraIndexChange;
   callbacks.onFollowCameraChange = config.onFollowCameraChange;
   callbacks.onFlyToRig = config.onFlyToRig;
+  callbacks.onNeoOnlyChange = config.onNeoOnlyChange;
 
   const overlayRoot = document.createElement('div');
   overlayRoot.id = 'overlay-root';
@@ -54,6 +57,9 @@ export function initOverlay(config: TopBarConfig): TopBarHandle & { frameViewer:
     },
     setPlaying(state: boolean) {
       isPlaying.value = state;
+    },
+    setNeoOnly(neo: boolean) {
+      neoOnly.value = neo;
     },
     frameViewer: {
       setFrameIndex(index: number) {

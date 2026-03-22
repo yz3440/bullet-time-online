@@ -138,7 +138,7 @@ function buildFrustumLines(cams: ParsedCamera[]): Float32Array {
 }
 
 const frustumPositions = Array.from(buildFrustumLines(cameras));
-const frustumColor = new pc.Color(0, 1, 0.255, 0.6);
+let frustumColor = new pc.Color(0, 1, 0.255, 0.6);
 
 // ---- PlayCanvas Application ----
 
@@ -163,7 +163,10 @@ const { CameraControls } =
 const splatAsset = new pc.Asset('splat', 'gsplat', {
   url: '/splats/bullet-time.sog',
 });
-const loader = new pc.AssetListLoader([splatAsset], app.assets);
+const neoSplatAsset = new pc.Asset('neo-splat', 'gsplat', {
+  url: '/splats/bullet-time-neo.sog',
+});
+const loader = new pc.AssetListLoader([splatAsset, neoSplatAsset], app.assets);
 await new Promise<void>((resolve) => loader.load(resolve));
 
 // ---- Camera ----
@@ -206,12 +209,19 @@ splatEntity.addComponent('gsplat', { asset: splatAsset });
 (splatEntity.gsplat as any).material?.setDefine('GSPLAT_AA', true);
 (splatEntity.gsplat as any).highQualitySH = true;
 
-// Apply leveling rotation to the splat
 const levelEuler = new pc.Vec3();
 levelRotation.getEulerAngles(levelEuler);
 splatEntity.setLocalEulerAngles(levelEuler.x, levelEuler.y, levelEuler.z);
 
 app.root.addChild(splatEntity);
+
+const neoSplatEntity = new pc.Entity('NeoSplat');
+neoSplatEntity.addComponent('gsplat', { asset: neoSplatAsset });
+(neoSplatEntity.gsplat as any).material?.setDefine('GSPLAT_AA', true);
+(neoSplatEntity.gsplat as any).highQualitySH = true;
+neoSplatEntity.setLocalEulerAngles(levelEuler.x, levelEuler.y, levelEuler.z);
+neoSplatEntity.enabled = false;
+app.root.addChild(neoSplatEntity);
 
 // ---- State ----
 
@@ -383,6 +393,22 @@ const overlayHandle = initOverlay({
     overlayHandle.setFollowCamera(false);
     overlayHandle.frameViewer.setActive(false);
     flyToOrbit(rigCameraPos, rigCameraFocusPoint, rigCameraFov);
+
+    splatEntity.enabled = false;
+    neoSplatEntity.enabled = true;
+    (cameraEntity.camera as any).clearColor = new pc.Color(0, 1, 0, 1);
+    frustumColor = new pc.Color(0.5, 0.5, 0.5, 0.6);
+    overlayHandle.setNeoOnly(true);
+  },
+  onNeoOnlyChange(neo) {
+    splatEntity.enabled = !neo;
+    neoSplatEntity.enabled = neo;
+    (cameraEntity.camera as any).clearColor = neo
+      ? new pc.Color(0, 1, 0, 1)
+      : new pc.Color(0, 0, 0, 1);
+    frustumColor = neo
+      ? new pc.Color(0.5, 0.5, 0.5, 0.6)
+      : new pc.Color(0, 1, 0.255, 0.6);
   },
 });
 
