@@ -27,12 +27,13 @@ export function WindowManager({ windows }: { windows: WindowDef[] }) {
 
   if (mobile) {
     const gridHeight = GRID_ROWS * GRID_ROW_HEIGHT;
-    const maxContentHeight = window.innerHeight - TOP_BAR_HEIGHT - MARQUEE_HEIGHT - gridHeight - 8;
+    const fixedChrome = TOP_BAR_HEIGHT + MARQUEE_HEIGHT + gridHeight + 8;
+    const maxContentHeight = `calc(100vh - ${fixedChrome}px - env(safe-area-inset-top) - env(safe-area-inset-bottom))`;
 
     return (
       <div style={{
         position: 'fixed',
-        bottom: `${MARQUEE_HEIGHT}px`,
+        bottom: `calc(${MARQUEE_HEIGHT}px + env(safe-area-inset-bottom))`,
         left: 0,
         right: 0,
         zIndex: 9998,
@@ -44,7 +45,7 @@ export function WindowManager({ windows }: { windows: WindowDef[] }) {
           <div style={{
             background: 'rgba(0,0,0,0.85)',
             borderTop: '1px solid #00FF41',
-            maxHeight: `${maxContentHeight}px`,
+            maxHeight: maxContentHeight,
             overflowY: 'auto',
           }}>
             {windows[openIndex.value].children}

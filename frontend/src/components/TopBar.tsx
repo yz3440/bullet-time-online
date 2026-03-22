@@ -63,7 +63,7 @@ export function TopBar() {
   return (
     <div
       class='fixed top-0 left-0 right-0 flex items-center gap-3 px-1 py-px overflow-hidden bg-black/70 backdrop-blur-sm'
-      style={{ zIndex: 9999, pointerEvents: 'auto' }}
+      style={{ zIndex: 9999, pointerEvents: 'auto', paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}
     >
       <Slider
         count={count}

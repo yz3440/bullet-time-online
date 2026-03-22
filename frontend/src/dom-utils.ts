@@ -86,6 +86,7 @@ export function createMarqueeElement(): HTMLElement {
   const wrapper = document.createElement('div');
   wrapper.className = 'absolute bottom-0 z-20 w-screen overflow-hidden font-led select-none pointer-events-none bg-black';
   wrapper.style.textShadow = '0 0 8px #00FF41, 0 0 20px rgba(0,255,65,0.4)';
+  wrapper.style.paddingBottom = 'env(safe-area-inset-bottom)';
 
   const track = document.createElement('div');
   track.className = 'whitespace-nowrap text-white py-px';
