@@ -3,15 +3,16 @@ import path from 'path';
 
 export default defineConfig({
   resolve: {
-    alias: { '@': path.resolve(__dirname, './src') },
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      'react': 'preact/compat',
+      'react-dom': 'preact/compat',
+    },
+  },
+  esbuild: {
+    jsxImportSource: 'preact',
   },
   build: {
     target: 'esnext',
-  },
-  server: {
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'credentialless',
-    },
   },
 });
