@@ -230,12 +230,22 @@ const transition = {
 };
 
 const LERP_SPEED = 4;
+const ORIGINAL_ASPECT = 3754 / 1618;
+
+function fitFov(baseFov: number): number {
+  const viewportAspect = canvas.width / canvas.height;
+  if (viewportAspect < ORIGINAL_ASPECT) {
+    const rad = baseFov * (Math.PI / 360);
+    return 2 * Math.atan(Math.tan(rad) * ORIGINAL_ASPECT / viewportAspect) * (180 / Math.PI);
+  }
+  return baseFov;
+}
 
 function startTransition() {
   const cam = cameras[params.cameraIndex];
   transition.targetPos.copy(cam.position);
   transition.targetQuat.copy(cam.quaternion);
-  transition.targetFov = cam.fov;
+  transition.targetFov = fitFov(cam.fov);
   transition.active = true;
   transition.releaseOnComplete = false;
   transition.focusOnComplete = null;
@@ -329,7 +339,7 @@ app.on('update', (dt: number) => {
     const cam = cameras[params.cameraIndex];
     cameraEntity.setPosition(cam.position.x, cam.position.y, cam.position.z);
     cameraEntity.setLocalRotation(cam.quaternion.x, cam.quaternion.y, cam.quaternion.z, cam.quaternion.w);
-    (cameraEntity.camera as any).fov = cam.fov;
+    (cameraEntity.camera as any).fov = fitFov(cam.fov);
   }
 });
 

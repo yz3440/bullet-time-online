@@ -773,7 +773,7 @@ function createBtsVideoWindow(): HTMLElement {
   const win = createFloatingWindow('', { width: 300, x: 580, y: 40 });
   const titleSpan = win.element.querySelector('.font-led') as HTMLElement;
   titleSpan.innerHTML =
-    'BTS VIDEO ' +
+    'MATRIX BTS VIDEO ' +
     '<a href="https://www.newworlddesigns.co.uk/creating-the-matrix-bullet-time-effect/" target="_blank" style="color:#aaa;font-size:10px;text-decoration:none" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">(Source)</a>';
 
   const videoWrap = document.createElement('div');
@@ -807,7 +807,7 @@ function createRigWindow(onFlyToRig: () => void): HTMLElement {
   const win = createFloatingWindow('', { width: 260, x: 580, y: 320 });
   const titleSpan = win.element.querySelector('.font-led') as HTMLElement;
   titleSpan.innerHTML =
-    'CAMERA RIG ' +
+    'MATRIX CAMERA RIG ' +
     '<a href="https://beforesandafters.com/2021/07/15/vfx-artifacts-the-bullet-time-rig-from-the-matrix/" target="_blank" style="color:#aaa;font-size:10px;text-decoration:none" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">(Source)</a>';
 
   const rigImg = document.createElement('img');
@@ -839,6 +839,106 @@ function createRigWindow(onFlyToRig: () => void): HTMLElement {
   return win.element;
 }
 
+// ---- Mobile Drawer ----
+
+const MOBILE_BREAKPOINT = 768;
+
+function isMobile(): boolean {
+  return window.innerWidth < MOBILE_BREAKPOINT;
+}
+
+interface DrawerPanel {
+  titleBar: HTMLElement;
+  content: HTMLElement;
+  wrapper: HTMLElement;
+}
+
+function createMobileDrawer(windows: FloatingWindowHandle[]): HTMLElement {
+  const drawer = document.createElement('div');
+  drawer.style.position = 'fixed';
+  drawer.style.bottom = '0';
+  drawer.style.left = '0';
+  drawer.style.right = '0';
+  drawer.style.zIndex = '9998';
+  drawer.style.pointerEvents = 'auto';
+  drawer.style.display = 'flex';
+  drawer.style.flexDirection = 'column';
+
+  const panels: DrawerPanel[] = [];
+
+  for (const win of windows) {
+    const el = win.element;
+    const titleBar = el.querySelector('div') as HTMLElement;
+    const content = el.children[1] as HTMLElement;
+
+    // Reset floating window styles
+    el.style.position = 'static';
+    el.style.left = '';
+    el.style.right = '';
+    el.style.top = '';
+    el.style.bottom = '';
+    el.style.width = '100%';
+    el.style.display = '';
+    el.style.boxShadow = 'none';
+    el.style.border = 'none';
+    el.style.borderTop = '1px solid #00FF41';
+
+    // Disable drag on mobile
+    titleBar.style.cursor = 'default';
+    titleBar.style.touchAction = 'auto';
+
+    // Content starts collapsed
+    content.style.display = 'none';
+    content.style.overflow = 'hidden';
+
+    // Remove minimize button on mobile
+    const minBtn = titleBar.querySelector('button');
+    if (minBtn) minBtn.style.display = 'none';
+
+    panels.push({ titleBar, content, wrapper: el });
+    drawer.appendChild(el);
+  }
+
+  const TOP_BAR_HEIGHT = 28;
+  const MARQUEE_HEIGHT = 24;
+
+  function getAvailableHeight(): number {
+    const titleBarsHeight = panels.length * 29;
+    return window.innerHeight - TOP_BAR_HEIGHT - MARQUEE_HEIGHT - titleBarsHeight;
+  }
+
+  function openPanel(index: number) {
+    const available = getAvailableHeight();
+    for (let i = 0; i < panels.length; i++) {
+      const p = panels[i];
+      if (i === index && p.content.style.display === 'none') {
+        p.content.style.display = '';
+        p.content.style.maxHeight = `${available}px`;
+      } else {
+        p.content.style.display = 'none';
+      }
+    }
+  }
+
+  panels.forEach((p, i) => {
+    p.titleBar.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).tagName === 'A') return;
+      openPanel(i);
+    });
+  });
+
+  window.addEventListener('resize', () => {
+    const available = getAvailableHeight();
+    for (const p of panels) {
+      if (p.content.style.display !== 'none') {
+        p.content.style.maxHeight = `${available}px`;
+      }
+    }
+  });
+
+  return drawer;
+}
+
 // ---- Init ----
 
 export function initOverlay(config: TopBarConfig): TopBarHandle & { frameViewer: FrameViewerHandle } {
@@ -854,7 +954,6 @@ export function initOverlay(config: TopBarConfig): TopBarHandle & { frameViewer:
 
   const { element, handle } = createTopBar(config);
   root.appendChild(element);
-  root.appendChild(createProductWindow());
   root.appendChild(createMarquee());
 
   const frameViewer = createFrameViewer(config.cameraCount, config.initialCameraIndex, (idx) => {
@@ -864,9 +963,26 @@ export function initOverlay(config: TopBarConfig): TopBarHandle & { frameViewer:
     handle.setPlaying(playing);
   });
   frameViewerRef = frameViewer;
-  root.appendChild(frameViewer.element);
-  root.appendChild(createBtsVideoWindow());
-  root.appendChild(createRigWindow(config.onFlyToRig));
+
+  const productWin = createProductWindow();
+  const btsWin = createBtsVideoWindow();
+  const rigWin = createRigWindow(config.onFlyToRig);
+
+  if (isMobile()) {
+    // Collect all window handles for the drawer
+    const allWindows: FloatingWindowHandle[] = [
+      { element: frameViewer.element, setVisible: () => {}, contentEl: frameViewer.element.children[1] as HTMLElement },
+      { element: btsWin, setVisible: () => {}, contentEl: btsWin.children[1] as HTMLElement },
+      { element: rigWin, setVisible: () => {}, contentEl: rigWin.children[1] as HTMLElement },
+      { element: productWin, setVisible: () => {}, contentEl: productWin.children[1] as HTMLElement },
+    ];
+    root.appendChild(createMobileDrawer(allWindows));
+  } else {
+    root.appendChild(frameViewer.element);
+    root.appendChild(btsWin);
+    root.appendChild(rigWin);
+    root.appendChild(productWin);
+  }
 
   return { ...handle, frameViewer };
 }
