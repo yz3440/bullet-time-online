@@ -15,6 +15,11 @@ export function About() {
           Full writeup ↗
         </a>
       </p>
+      <p style={{ margin: '0 0 4px' }}>
+        <a href="https://github.com/yz3440/bullet-time-online" target="_blank" style={linkStyle}>
+          Source code ↗
+        </a>
+      </p>
       <p style={{ margin: 0 }}>
         Made by{' '}
         <a href="https://yufengzhao.com" target="_blank" style={linkStyle}>
