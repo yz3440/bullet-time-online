@@ -18,7 +18,7 @@ interface WindowDef {
 const TOP_BAR_HEIGHT = 28;
 const MARQUEE_HEIGHT = 24;
 const GRID_ROW_HEIGHT = 29;
-const GRID_ROWS = 2;
+const GRID_ROWS = 3;
 
 import { FloatingWindow } from './FloatingWindow';
 
@@ -71,6 +71,7 @@ export function WindowManager({ windows }: { windows: WindowDef[] }) {
         >
           {windows.map((w, i) => {
             const active = openIndex.value === i;
+            const spanFull = i === windows.length - 1 && windows.length % 2 === 1;
             return (
               <button
                 key={w.key}
@@ -87,6 +88,7 @@ export function WindowManager({ windows }: { windows: WindowDef[] }) {
                   margin: 0,
                   textAlign: 'center',
                   userSelect: 'none',
+                  gridColumn: spanFull ? 'span 2' : undefined,
                   transition:
                     'background 0.15s, border-color 0.15s, color 0.15s, text-shadow 0.15s',
                 }}

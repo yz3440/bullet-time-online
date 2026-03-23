@@ -5,6 +5,7 @@ import { FrameViewer, FrameViewerTitle } from './FrameViewer';
 import { BtsVideo, BtsVideoTitle } from './BtsVideo';
 import { CameraRig, CameraRigTitle } from './CameraRig';
 import { BlurayViewer } from './BlurayViewer';
+import { About } from './About';
 import { createMarqueeElement } from '../dom-utils';
 
 function Marquee() {
@@ -45,6 +46,13 @@ export function Overlay() {
       mobileTitle: 'CAMERA RIG',
       width: 260, x: 20, y: 300, anchor: 'right' as const,
       children: <CameraRig />,
+    },
+    {
+      key: 'about',
+      title: 'About',
+      mobileTitle: 'ABOUT',
+      width: 280, x: 340, y: 40, anchor: 'right' as const,
+      children: <About />,
     },
   ];
 
