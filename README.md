@@ -33,7 +33,7 @@ Converts reconstruction data into web-ready formats. Run once after changing sou
 bun prepare-data.ts
 ```
 
-This parses COLMAP binaries into camera JSON and converts PLY splats to PlayCanvas SOG format. Only regenerates files when sources are newer than outputs.
+This parses COLMAP binaries into camera JSON, converts PLY splats to PlayCanvas SOG format, and converts the original JPG frames to WebP for fast scrubbing. Only regenerates files when sources are newer than outputs.
 
 ```
 reconstruction-data/colmap/{cameras,images}.bin
@@ -44,6 +44,9 @@ reconstruction-data/splats/bullet-time.ply
 
 reconstruction-data/splats/bullet-time-neo.ply   (optional, skipped if absent)
   → frontend/public/splats/bullet-time-neo.sog
+
+original-frames/*.jpg
+  → frontend/public/frames/*.webp             (resized + compressed for web)
 ```
 
 Both derived outputs are committed so the frontend works without re-running the script.

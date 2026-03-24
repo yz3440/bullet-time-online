@@ -15,4 +15,4 @@ bun install
 bun dev
 ```
 
-The camera data (`src/data/postshot-colmap.json`) and splat files (`public/splats/bullet-time.sog`, `public/splats/bullet-time-neo.sog`) are pre-committed. To regenerate them from source data, run `bun prepare-data.ts` from the repo root.
+The camera data (`src/data/postshot-colmap.json`), splat files (`public/splats/bullet-time.sog`, `public/splats/bullet-time-neo.sog`), and WebP frames (`public/frames/*.webp`) are pre-committed. To regenerate them from source data, run `bun prepare-data.ts` from the repo root.
