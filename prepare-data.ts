@@ -1,18 +1,21 @@
 /**
  * One-time data preparation script.
  *
- * Parses COLMAP binary files → JSON camera data, and converts the raw PLY
- * Gaussian splat to PlayCanvas SOG format. Only regenerates when sources
- * are newer than outputs (timestamp check).
+ * Parses COLMAP binary files → JSON camera data, converts the raw PLY
+ * Gaussian splat to PlayCanvas SOG format, and converts original JPG
+ * frames to WebP. Only regenerates when sources are newer than outputs
+ * (timestamp check).
  *
  * Usage: bun prepare-data.ts
  *
  * Requires: bun install in frontend/ (for @playcanvas/splat-transform)
+ *           sharp (bun add sharp)
  */
 
-import { readFileSync, writeFileSync, mkdirSync, statSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, statSync, existsSync, readdirSync } from 'fs';
 import { execSync } from 'child_process';
 import path from 'path';
+import sharp from 'sharp';
 
 const rootDir = import.meta.dirname;
 
@@ -21,9 +24,11 @@ const rootDir = import.meta.dirname;
 const colmapDir = path.join(rootDir, 'reconstruction-data/colmap');
 const plyPath = path.join(rootDir, 'reconstruction-data/splats/bullet-time.ply');
 const neoPlyPath = path.join(rootDir, 'reconstruction-data/splats/bullet-time-neo.ply');
+const framesDir = path.join(rootDir, 'original-frames');
 const jsonOut = path.join(rootDir, 'frontend/src/data/postshot-colmap.json');
 const sogOut = path.join(rootDir, 'frontend/public/splats/bullet-time.sog');
 const neoSogOut = path.join(rootDir, 'frontend/public/splats/bullet-time-neo.sog');
+const webpOut = path.join(rootDir, 'frontend/public/frames');
 
 // ---- Helpers ----
 
@@ -157,4 +162,47 @@ if (existsSync(neoPlyPath)) {
   }
 } else {
   console.log('bullet-time-neo.ply not found, skipping neo splat');
+}
+
+// ---- JPG → WebP frames ----
+
+if (!existsSync(framesDir)) {
+  console.error('original-frames/ not found');
+  process.exit(1);
+}
+
+const jpgs = readdirSync(framesDir)
+  .filter((f) => /\.jpe?g$/i.test(f))
+  .sort();
+
+const newestJpg = Math.max(...jpgs.map((f) => mtime(path.join(framesDir, f))));
+const oldestWebp = jpgs.reduce((oldest, f) => {
+  const t = mtime(path.join(webpOut, path.parse(f).name + '.webp'));
+  return t === 0 ? 0 : Math.min(oldest, t);
+}, Infinity);
+
+if (newestJpg > oldestWebp) {
+  mkdirSync(webpOut, { recursive: true });
+  console.log(`Converting ${jpgs.length} JPGs → WebP ...`);
+  const PARALLEL = 8;
+  let done = 0;
+  const t0 = performance.now();
+
+  for (let i = 0; i < jpgs.length; i += PARALLEL) {
+    const batch = jpgs.slice(i, i + PARALLEL);
+    await Promise.all(batch.map(async (f) => {
+      const src = path.join(framesDir, f);
+      const dst = path.join(webpOut, path.parse(f).name + '.webp');
+      if (mtime(src) > mtime(dst)) {
+        await sharp(src).resize({ width: 960 }).webp({ quality: 50 }).toFile(dst);
+      }
+      done++;
+    }));
+    process.stdout.write(`\r  ${done}/${jpgs.length}`);
+  }
+
+  const sec = ((performance.now() - t0) / 1000).toFixed(1);
+  console.log(`\n${jpgs.length} frames → ${path.relative(rootDir, webpOut)} (${sec}s)`);
+} else {
+  console.log('WebP frames are up to date');
 }
