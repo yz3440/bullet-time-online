@@ -2,6 +2,8 @@
 
 Reconstructing the bullet time scene from The Matrix as a Gaussian splat, using reverse-engineered camera data from the original footage.
 
+![Demo](demo.gif)
+
 ## Project structure
 
 ```
