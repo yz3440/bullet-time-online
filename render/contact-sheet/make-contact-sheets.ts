@@ -1,12 +1,12 @@
 /**
  * Builds two identically-laid-out contact sheets:
- *   render/contact-sheet/original.png  — from frontend/public/frames/*.webp
- *   render/contact-sheet/splats.png    — from render/splat-renders/*.png
+ *   render/contact-sheet/original.jpg  — from frontend/public/frames/*.webp
+ *   render/contact-sheet/splats.jpg    — from render/splat-renders/*.png
  *                                         (run capture-splats.ts first)
  *
  * Grid: 16 cols x 15 rows (240 cells, 237 used, 3 empty).
- * Cell: 480 x 207 px (preserves 3754x1618 ≈ 2.32:1 native aspect).
- * Sheet: 7680 x 3105 px.
+ * Cell: 320 x 138 px (preserves 3754x1618 ≈ 2.32:1 native aspect).
+ * Sheet: 5120 x 2070 px, JPEG quality 85.
  */
 import sharp from 'sharp';
 import { mkdir, access, constants } from 'node:fs/promises';
@@ -18,10 +18,11 @@ const REPO_ROOT = resolve(SCRIPT_DIR, '..', '..');
 
 const COLS = 16;
 const ROWS = 15;
-const CELL_W = 480;
-const CELL_H = 207;
-const SHEET_W = COLS * CELL_W; // 7680
-const SHEET_H = ROWS * CELL_H; // 3105
+const CELL_W = 320;
+const CELL_H = 138;
+const SHEET_W = COLS * CELL_W; // 5120
+const SHEET_H = ROWS * CELL_H; // 2070
+const JPEG_QUALITY = 85;
 const N = 237;
 
 const FRAMES_DIR = join(REPO_ROOT, 'frontend', 'public', 'frames');
@@ -63,7 +64,7 @@ async function buildSheet(
     },
   })
     .composite(tiles)
-    .png({ compressionLevel: 9 })
+    .jpeg({ quality: JPEG_QUALITY, mozjpeg: true })
     .toFile(outPath);
   console.log(`  done (${SHEET_W}x${SHEET_H})`);
 }
@@ -85,7 +86,7 @@ async function main() {
       throw new Error(`Missing original frame: ${p}`);
     }
   }
-  await buildSheet(originalPaths, join(OUT_DIR, 'original.png'), 'original');
+  await buildSheet(originalPaths, join(OUT_DIR, 'original.jpg'), 'original');
 
   const splatsAvailable = await fileExists(splatPaths[0]);
   if (!splatsAvailable) {
@@ -100,7 +101,7 @@ async function main() {
       throw new Error(`Missing splat render: ${p}`);
     }
   }
-  await buildSheet(splatPaths, join(OUT_DIR, 'splats.png'), 'splats');
+  await buildSheet(splatPaths, join(OUT_DIR, 'splats.jpg'), 'splats');
 }
 
 main().catch((err) => {
