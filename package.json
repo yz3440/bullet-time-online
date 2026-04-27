@@ -1,6 +1,12 @@
 {
+  "scripts": {
+    "capture-splats": "bun render/contact-sheet/capture-splats.ts",
+    "contact-sheets": "bun render/contact-sheet/make-contact-sheets.ts",
+    "all-sheets": "bun render/contact-sheet/capture-splats.ts && bun render/contact-sheet/make-contact-sheets.ts"
+  },
   "dependencies": {},
   "devDependencies": {
+    "playwright": "^1.49.0",
     "sharp": "^0.34.5"
   }
 }

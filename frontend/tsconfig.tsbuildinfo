@@ -1,1 +1,1 @@
-{"root":["./src/main.ts","./src/overlay.ts","./src/vite-env.d.ts"],"version":"5.9.3"}
+{"root":["./src/dom-utils.ts","./src/hooks.ts","./src/icons.tsx","./src/main.ts","./src/overlay.ts","./src/state.ts","./src/vite-env.d.ts","./src/components/about.tsx","./src/components/blurayviewer.tsx","./src/components/btsvideo.tsx","./src/components/camerarig.tsx","./src/components/floatingwindow.tsx","./src/components/frameviewer.tsx","./src/components/overlay.tsx","./src/components/slider.tsx","./src/components/topbar.tsx","./src/components/windowmanager.tsx"],"version":"5.9.3"}

@@ -3,6 +3,9 @@ import colmapData from '@/data/postshot-colmap.json';
 import './index.css';
 import { initOverlay } from './overlay';
 
+const captureMode =
+  new URLSearchParams(location.search).get('capture') === '1';
+
 interface ColmapImage {
   id: number;
   name: string;
@@ -147,7 +150,10 @@ canvas.style.touchAction = 'none';
 document.getElementById('root')!.appendChild(canvas);
 
 const app = new pc.Application(canvas, {
-  graphicsDeviceOptions: { antialias: false },
+  graphicsDeviceOptions: {
+    antialias: false,
+    preserveDrawingBuffer: captureMode,
+  },
 });
 app.setCanvasFillMode(pc.FILLMODE_FILL_WINDOW);
 app.setCanvasResolution(pc.RESOLUTION_AUTO);
@@ -317,7 +323,9 @@ app.on('update', (dt: number) => {
   //   );
   // }
 
-  app.drawLineArrays(frustumPositions, frustumColor, false);
+  if (!captureMode) {
+    app.drawLineArrays(frustumPositions, frustumColor, false);
+  }
 
   if (transition.active) {
     transition.progress = Math.min(transition.progress + dt * LERP_SPEED, 1);
@@ -351,8 +359,43 @@ app.on('update', (dt: number) => {
   }
 });
 
+// ---- Capture mode (headless splat rendering) ----
+
+if (captureMode) {
+  params.followCamera = true;
+  params.cameraIndex = 0;
+
+  const snap = () => {
+    const cam = cameras[params.cameraIndex];
+    cameraEntity.setPosition(cam.position.x, cam.position.y, cam.position.z);
+    cameraEntity.setLocalRotation(
+      cam.quaternion.x,
+      cam.quaternion.y,
+      cam.quaternion.z,
+      cam.quaternion.w,
+    );
+    (cameraEntity.camera as any).fov = fitFov(cam.fov);
+  };
+  snap();
+
+  (window as any).__cameraCount = cameras.length;
+  (window as any).__captureFrame = async (idx: number) => {
+    params.cameraIndex = idx;
+    snap();
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+  };
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      (window as any).__captureReady = true;
+    });
+  });
+}
+
 // ---- Overlay UI ----
 
+if (!captureMode) {
 const overlayHandle = initOverlay({
   cameraCount: cameras.length,
   initialCameraIndex: params.cameraIndex,
@@ -436,3 +479,4 @@ window.addEventListener('wheel', (e) => {
     overlayHandle.frameViewer.setFrameIndex(next);
   }
 }, { passive: false });
+}
